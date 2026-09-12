@@ -2,239 +2,427 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+
 <title>Polymarket AI Prediction Machine</title>
 
 <style>
-*{box-sizing:border-box}
-body{
+*{
+  box-sizing:border-box;
+}
+
+html,body{
   margin:0;
-  font-family:Inter,Arial,sans-serif;
-  background:#07111f;
-  color:#e8eef7;
+  padding:0;
+  background:#070b12;
+  color:#f4f7fb;
+  font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
 }
+
+body{
+  min-height:100vh;
+}
+
 .container{
-  max-width:1400px;
+  width:min(1400px,100%);
   margin:auto;
-  padding:20px;
+  padding:18px;
 }
-header{
+
+.header{
   display:flex;
   justify-content:space-between;
   align-items:center;
-  gap:15px;
+  gap:14px;
   margin-bottom:20px;
 }
-h1{
+
+.brand h1{
   margin:0;
   font-size:25px;
+  letter-spacing:-.7px;
 }
-.sub{
-  color:#8ea1b8;
+
+.brand p{
+  margin:5px 0 0;
+  color:#8f9bad;
   font-size:13px;
-  margin-top:5px;
 }
+
 .status{
-  padding:8px 12px;
-  border:1px solid #29415e;
-  border-radius:10px;
+  display:flex;
+  align-items:center;
+  gap:7px;
+  color:#8f9bad;
   font-size:12px;
-  background:#0b192b;
 }
-.status.ok{color:#55e39b}
-.status.err{color:#ff7373}
+
+.dot{
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  background:#39d98a;
+  box-shadow:0 0 12px #39d98a;
+}
+
+.controls{
+  display:grid;
+  grid-template-columns:1fr 150px 150px auto;
+  gap:10px;
+  margin-bottom:18px;
+}
+
+input,select,button{
+  width:100%;
+  min-height:44px;
+  border:1px solid #202a39;
+  border-radius:10px;
+  background:#0d131d;
+  color:#fff;
+  padding:0 13px;
+  outline:none;
+}
+
+input:focus,select:focus{
+  border-color:#45668e;
+}
+
+button{
+  cursor:pointer;
+  background:#152234;
+  font-weight:700;
+}
+
+button:hover{
+  background:#1a2b42;
+}
 
 .stats{
   display:grid;
   grid-template-columns:repeat(6,1fr);
-  gap:12px;
+  gap:10px;
   margin-bottom:20px;
 }
+
 .stat{
-  background:#0c1a2b;
-  border:1px solid #1c314a;
-  border-radius:14px;
-  padding:15px;
+  background:#0c121b;
+  border:1px solid #1b2533;
+  border-radius:13px;
+  padding:14px;
 }
-.stat .label{
-  color:#8195ad;
+
+.stat-label{
+  color:#7e8999;
+  font-size:11px;
+  text-transform:uppercase;
+  letter-spacing:.6px;
+}
+
+.stat-value{
+  margin-top:6px;
+  font-size:21px;
+  font-weight:800;
+}
+
+.section-title{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin:24px 0 11px;
+}
+
+.section-title h2{
+  margin:0;
+  font-size:18px;
+}
+
+.section-title span{
+  color:#718095;
   font-size:12px;
 }
-.stat .value{
-  font-size:21px;
-  font-weight:700;
-  margin-top:6px;
-}
 
-.toolbar{
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-  margin-bottom:18px;
-}
-input,select,button{
-  background:#0c1a2b;
-  color:#e8eef7;
-  border:1px solid #29415e;
-  border-radius:10px;
-  padding:11px 13px;
-}
-input{
-  flex:1;
-  min-width:220px;
-}
-button{
-  cursor:pointer;
-}
-button:hover{
-  background:#12263d;
-}
-
-.message{
-  padding:25px;
-  text-align:center;
-  border:1px dashed #29415e;
-  border-radius:14px;
-  color:#91a4bb;
-  margin-top:20px;
-}
-
-.grid{
+.opportunities{
   display:grid;
   grid-template-columns:repeat(3,1fr);
-  gap:15px;
+  gap:12px;
+}
+
+.opportunity{
+  background:linear-gradient(145deg,#111a27,#0a1018);
+  border:1px solid #263446;
+  border-radius:15px;
+  padding:15px;
+  cursor:pointer;
+}
+
+.opportunity:hover{
+  border-color:#45617f;
+}
+
+.market-question{
+  font-weight:750;
+  line-height:1.35;
+  font-size:14px;
+  margin-bottom:12px;
+}
+
+.ai-row{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+}
+
+.ai-box{
+  border-radius:10px;
+  background:#0a0f17;
+  border:1px solid #1c2735;
+  padding:10px;
+}
+
+.ai-box-label{
+  color:#758297;
+  font-size:10px;
+  text-transform:uppercase;
+}
+
+.ai-box-value{
+  margin-top:4px;
+  font-size:22px;
+  font-weight:850;
+}
+
+.edge{
+  font-size:22px;
+  font-weight:900;
+}
+
+.edge.positive{
+  color:#42df91;
+}
+
+.edge.negative{
+  color:#ff6676;
+}
+
+.signal{
+  margin-top:10px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:8px;
+}
+
+.badge{
+  padding:6px 9px;
+  border-radius:7px;
+  font-size:10px;
+  font-weight:850;
+  letter-spacing:.4px;
+  background:#182131;
+}
+
+.badge.yes{
+  color:#49e19a;
+  background:#0d241b;
+}
+
+.badge.no{
+  color:#ff6878;
+  background:#2a1117;
+}
+
+.badge.neutral{
+  color:#a7b1bf;
+}
+
+.confidence{
+  color:#8491a3;
+  font-size:11px;
+}
+
+.markets{
+  display:grid;
+  gap:10px;
 }
 
 .card{
-  background:#0c1a2b;
-  border:1px solid #1c314a;
-  border-radius:16px;
-  padding:17px;
-  min-width:0;
-}
-.card:hover{
-  border-color:#3a5d83;
+  background:#0c121b;
+  border:1px solid #1b2533;
+  border-radius:14px;
+  padding:15px;
 }
 
 .card-top{
   display:flex;
   justify-content:space-between;
-  gap:10px;
-  align-items:flex-start;
+  gap:15px;
 }
 
-.rank{
-  color:#6f86a0;
-  font-size:12px;
-}
-
-.question{
-  font-size:16px;
-  font-weight:700;
-  line-height:1.35;
-  margin:10px 0 14px;
-}
-
-.badge{
-  display:inline-block;
-  padding:5px 8px;
-  border-radius:7px;
-  font-size:11px;
+.card-question{
+  font-size:14px;
+  line-height:1.4;
   font-weight:700;
 }
-.yes{
-  background:#123b2c;
-  color:#5ff0a6;
-}
-.no{
-  background:#412024;
-  color:#ff858d;
-}
-.neutral{
-  background:#263548;
-  color:#b9c6d6;
-}
 
-.prices{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:10px;
-  margin-bottom:13px;
-}
-
-.pricebox{
-  background:#081522;
-  border-radius:10px;
-  padding:12px;
-}
-.pricebox .label{
-  color:#7d91aa;
+.category{
+  margin-top:5px;
+  color:#657286;
   font-size:11px;
 }
-.pricebox .price{
-  font-size:22px;
-  font-weight:800;
-  margin-top:4px;
-}
 
-.meta{
+.card-grid{
+  margin-top:14px;
   display:grid;
-  grid-template-columns:repeat(3,1fr);
+  grid-template-columns:repeat(6,1fr);
   gap:8px;
-  margin-top:10px;
 }
 
-.meta-box{
-  background:#081522;
+.metric{
+  background:#090e15;
+  border:1px solid #18222e;
   border-radius:9px;
   padding:9px;
 }
-.meta-label{
-  color:#71869e;
-  font-size:10px;
-}
-.meta-value{
-  font-size:12px;
-  font-weight:700;
-  margin-top:3px;
+
+.metric-label{
+  font-size:9px;
+  color:#6f7b8d;
+  text-transform:uppercase;
 }
 
-.ai{
-  margin-top:13px;
-  padding:12px;
-  background:#101f31;
-  border-radius:10px;
-  border:1px solid #203750;
-}
-.ai-title{
-  color:#8da4bd;
-  font-size:11px;
-}
-.ai-value{
+.metric-value{
   margin-top:4px;
-  font-size:19px;
-  font-weight:800;
+  font-weight:850;
+  font-size:15px;
+}
+
+.positive{
+  color:#48df95;
+}
+
+.negative{
+  color:#ff6575;
+}
+
+.neutral-text{
+  color:#a4adba;
+}
+
+.progress{
+  margin-top:12px;
+  height:5px;
+  border-radius:5px;
+  background:#161e29;
+  overflow:hidden;
+}
+
+.progress-bar{
+  height:100%;
+  background:#4c79a7;
+  border-radius:5px;
+}
+
+.meta{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  margin-top:10px;
+  color:#647184;
+  font-size:10px;
+}
+
+.empty{
+  padding:35px;
+  text-align:center;
+  color:#758195;
+  border:1px dashed #273242;
+  border-radius:14px;
+}
+
+.error{
+  padding:16px;
+  border-radius:12px;
+  background:#291219;
+  border:1px solid #57202c;
+  color:#ff7b89;
+  font-size:13px;
 }
 
 .footer{
-  color:#60758e;
+  padding:30px 0 15px;
   text-align:center;
+  color:#566274;
   font-size:11px;
-  margin:30px 0 10px;
 }
 
-@media(max-width:1100px){
-  .stats{grid-template-columns:repeat(3,1fr)}
-  .grid{grid-template-columns:repeat(2,1fr)}
+@media(max-width:1000px){
+  .stats{
+    grid-template-columns:repeat(3,1fr);
+  }
+
+  .opportunities{
+    grid-template-columns:1fr 1fr;
+  }
+
+  .card-grid{
+    grid-template-columns:repeat(3,1fr);
+  }
 }
 
-@media(max-width:650px){
-  .container{padding:12px}
-  header{align-items:flex-start}
-  h1{font-size:20px}
-  .stats{grid-template-columns:repeat(2,1fr)}
-  .grid{grid-template-columns:1fr}
-  .meta{grid-template-columns:repeat(2,1fr)}
+@media(max-width:700px){
+  .container{
+    padding:12px;
+  }
+
+  .header{
+    align-items:flex-start;
+  }
+
+  .brand h1{
+    font-size:20px;
+  }
+
+  .controls{
+    grid-template-columns:1fr 1fr;
+  }
+
+  .controls input{
+    grid-column:1/-1;
+  }
+
+  .stats{
+    grid-template-columns:repeat(2,1fr);
+  }
+
+  .opportunities{
+    grid-template-columns:1fr;
+  }
+
+  .card-top{
+    display:block;
+  }
+
+  .card-grid{
+    grid-template-columns:repeat(2,1fr);
+  }
+}
+
+@media(max-width:430px){
+  .stats{
+    gap:7px;
+  }
+
+  .stat{
+    padding:11px;
+  }
+
+  .stat-value{
+    font-size:18px;
+  }
+
+  .card{
+    padding:12px;
+  }
 }
 </style>
 </head>
@@ -243,273 +431,397 @@ button:hover{
 
 <div class="container">
 
-<header>
-  <div>
-    <h1>Polymarket AI Prediction Machine</h1>
-    <div class="sub">Live market scanner • AI probability • edge detection</div>
-  </div>
-  <div id="status" class="status">Connecting...</div>
-</header>
+  <div class="header">
 
-<section class="stats">
-  <div class="stat">
-    <div class="label">Markets</div>
-    <div class="value" id="statMarkets">—</div>
-  </div>
+    <div class="brand">
+      <h1>Polymarket AI Prediction Machine</h1>
+      <p>AI probability scanner • Edge detection • Market intelligence</p>
+    </div>
 
-  <div class="stat">
-    <div class="label">Active</div>
-    <div class="value" id="statActive">—</div>
+    <div class="status">
+      <span class="dot" id="statusDot"></span>
+      <span id="statusText">Connecting...</span>
+    </div>
+
   </div>
 
-  <div class="stat">
-    <div class="label">Volume</div>
-    <div class="value" id="statVolume">—</div>
+  <div class="controls">
+
+    <input
+      id="search"
+      type="search"
+      placeholder="Search markets..."
+    >
+
+    <select id="signalFilter">
+      <option value="ALL">All Signals</option>
+      <option value="STRONG">Strong Only</option>
+      <option value="YES">YES</option>
+      <option value="NO">NO</option>
+      <option value="NEUTRAL">Neutral</option>
+    </select>
+
+    <select id="sort">
+      <option value="EDGE">AI Edge</option>
+      <option value="CONFIDENCE">Confidence</option>
+      <option value="VOLUME">Volume</option>
+      <option value="LIQUIDITY">Liquidity</option>
+      <option value="AI">AI Probability</option>
+    </select>
+
+    <button id="refreshBtn">Refresh</button>
+
   </div>
 
-  <div class="stat">
-    <div class="label">Liquidity</div>
-    <div class="value" id="statLiquidity">—</div>
+  <div class="stats">
+
+    <div class="stat">
+      <div class="stat-label">Markets</div>
+      <div class="stat-value" id="statMarkets">—</div>
+    </div>
+
+    <div class="stat">
+      <div class="stat-label">Active</div>
+      <div class="stat-value" id="statActive">—</div>
+    </div>
+
+    <div class="stat">
+      <div class="stat-label">Volume</div>
+      <div class="stat-value" id="statVolume">—</div>
+    </div>
+
+    <div class="stat">
+      <div class="stat-label">Liquidity</div>
+      <div class="stat-value" id="statLiquidity">—</div>
+    </div>
+
+    <div class="stat">
+      <div class="stat-label">Avg YES</div>
+      <div class="stat-value" id="statYes">—</div>
+    </div>
+
+    <div class="stat">
+      <div class="stat-label">Opportunities</div>
+      <div class="stat-value" id="statOpp">—</div>
+    </div>
+
   </div>
 
-  <div class="stat">
-    <div class="label">Avg YES</div>
-    <div class="value" id="statAvgYes">—</div>
+  <div class="section-title">
+    <h2>🔥 Top AI Opportunities</h2>
+    <span id="topCount">—</span>
   </div>
 
-  <div class="stat">
-    <div class="label">Updated</div>
-    <div class="value" id="statUpdated">—</div>
+  <div id="opportunities" class="opportunities"></div>
+
+  <div class="section-title">
+    <h2>All Markets</h2>
+    <span id="marketCount">—</span>
   </div>
-</section>
 
-<div class="toolbar">
-  <input
-    id="search"
-    type="search"
-    placeholder="Search markets..."
-  >
+  <div id="markets" class="markets">
+    <div class="empty">Loading markets...</div>
+  </div>
 
-  <select id="signalFilter">
-    <option value="all">All signals</option>
-    <option value="YES">YES</option>
-    <option value="NO">NO</option>
-    <option value="NEUTRAL">Neutral</option>
-  </select>
-
-  <select id="sort">
-    <option value="volume">Volume</option>
-    <option value="liquidity">Liquidity</option>
-    <option value="yes">YES probability</option>
-    <option value="edge">AI edge</option>
-  </select>
-
-  <button id="refresh">Refresh</button>
-</div>
-
-<div id="message" class="message">
-  Loading live Polymarket markets...
-</div>
-
-<div id="grid" class="grid"></div>
-
-<div class="footer">
-  Data source: Polymarket Gamma API + CLOB
-</div>
+  <div class="footer">
+    Polymarket AI Prediction Machine • Auto refresh every 60 seconds
+  </div>
 
 </div>
 
 <script>
-"use strict";
-
 const API = "/api/markets";
 
-let markets = [];
-let stats = {};
-let loading = false;
+let allMarkets = [];
+let lastUpdated = null;
 
 const $ = id => document.getElementById(id);
 
-function number(v, fallback = 0){
-  const n = Number(v);
-  return Number.isFinite(n) ? n : fallback;
+function number(value){
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
 }
 
-function money(v){
-  const n = number(v);
+function money(value){
+  const n = number(value);
 
-  if(n >= 1000000000)
+  if(n >= 1000000000){
     return "$" + (n / 1000000000).toFixed(2) + "B";
+  }
 
-  if(n >= 1000000)
+  if(n >= 1000000){
     return "$" + (n / 1000000).toFixed(2) + "M";
+  }
 
-  if(n >= 1000)
+  if(n >= 1000){
     return "$" + (n / 1000).toFixed(1) + "K";
+  }
 
   return "$" + n.toFixed(0);
 }
 
-function percent(v){
-  let n = number(v);
+function percent(value){
+  let n = number(value);
 
-  if(n <= 1) n *= 100;
+  if(Math.abs(n) <= 1){
+    n *= 100;
+  }
 
-  return n.toFixed(2) + "%";
+  return n.toFixed(1) + "%";
 }
 
 function escapeHtml(value){
   return String(value ?? "")
-    .replace(/&/g,"&amp;")
-    .replace(/</g,"&lt;")
-    .replace(/>/g,"&gt;")
-    .replace(/"/g,"&quot;")
-    .replace(/'/g,"&#039;");
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
 }
 
-function getYes(m){
-  return number(
-    m?.yes?.price ??
-    m?.yes?.probability ??
-    m?.marketYes ??
-    m?.outcomePrices?.[0]
-  );
+function getMarketYes(m){
+  if(m?.yes?.probability !== undefined){
+    return number(m.yes.probability);
+  }
+
+  if(m?.marketYes !== undefined){
+    return number(m.marketYes);
+  }
+
+  if(m?.yes?.price !== undefined){
+    return number(m.yes.price);
+  }
+
+  return 0;
 }
 
-function getNo(m){
-  return number(
-    m?.no?.price ??
-    m?.no?.probability ??
-    m?.marketNo ??
-    m?.outcomePrices?.[1]
-  );
+function getMarketNo(m){
+  if(m?.no?.probability !== undefined){
+    return number(m.no.probability);
+  }
+
+  if(m?.marketNo !== undefined){
+    return number(m.marketNo);
+  }
+
+  if(m?.no?.price !== undefined){
+    return number(m.no.price);
+  }
+
+  return Math.max(0,1-getMarketYes(m));
 }
 
-function getAI(m){
-  if(m?.aiYes !== undefined)
+function getAIYes(m){
+  if(m?.aiYes !== undefined){
     return number(m.aiYes);
+  }
 
-  if(m?.modelYes !== undefined)
-    return number(m.modelYes);
+  if(m?.modelYes !== undefined){
+    const n = number(m.modelYes);
+    return Math.abs(n) <= 1 ? n * 100 : n;
+  }
 
-  if(m?.ai?.yes !== undefined)
-    return number(m.ai.yes);
-
-  if(m?.prediction?.yes !== undefined)
-    return number(m.prediction.yes);
-
-  return null;
+  return getMarketYes(m);
 }
 
 function getEdge(m){
-  if(m?.edge !== undefined)
+  if(m?.edgePct !== undefined){
+    return number(m.edgePct);
+  }
+
+  if(m?.edge !== undefined){
     return number(m.edge);
+  }
 
-  if(m?.edgePct !== undefined)
-    return number(m.edgePct) / 100;
+  return getAIYes(m) - (
+    getMarketYes(m) > 1
+      ? getMarketYes(m)
+      : getMarketYes(m) * 100
+  );
+}
 
-  const ai = getAI(m);
-  const yes = getYes(m);
-
-  if(ai !== null)
-    return ai - yes;
-
-  return null;
+function getConfidence(m){
+  return number(m?.confidence);
 }
 
 function getSignal(m){
-  if(m?.signal?.side)
-    return String(m.signal.side).toUpperCase();
+  const side = String(
+    m?.signal?.side ||
+    m?.signal ||
+    "NEUTRAL"
+  ).toUpperCase();
 
-  const yes = getYes(m);
+  const strength = String(
+    m?.signal?.strength ||
+    ""
+  ).toUpperCase();
 
-  if(yes >= 0.80) return "YES";
-  if(yes >= 0.65) return "YES";
-  if(yes <= 0.20) return "NO";
-  if(yes <= 0.35) return "NO";
-
-  return "NEUTRAL";
+  return {
+    side,
+    strength
+  };
 }
 
-function signalClass(signal){
-  if(signal === "YES") return "yes";
-  if(signal === "NO") return "no";
+function signalClass(side){
+  if(side === "YES") return "yes";
+  if(side === "NO") return "no";
   return "neutral";
 }
 
 function signalText(m){
-  if(m?.signal?.strength)
-    return m.signal.strength;
+  const s = getSignal(m);
 
-  return getSignal(m);
+  if(s.side === "NEUTRAL"){
+    return "NEUTRAL";
+  }
+
+  return s.strength
+    ? `${s.strength} ${s.side}`
+    : s.side;
+}
+
+function normalizeProbability(value){
+  const n = number(value);
+
+  if(n <= 1){
+    return n * 100;
+  }
+
+  return n;
 }
 
 function normalizeMarket(m){
+  const marketYes = normalizeProbability(getMarketYes(m));
+  const marketNo = normalizeProbability(getMarketNo(m));
+  const aiYes = normalizeProbability(getAIYes(m));
+
   return {
     ...m,
-
-    question:
-      m?.question ||
-      "Unknown market",
-
-    yes:
-      getYes(m),
-
-    no:
-      getNo(m),
-
-    ai:
-      getAI(m),
-
-    edge:
-      getEdge(m),
-
-    volume:
-      number(m?.volume),
-
-    volume24h:
-      number(m?.volume24h),
-
-    liquidity:
-      number(m?.liquidity),
-
-    signal:
-      getSignal(m)
+    question: m.question || "Unknown market",
+    category: m.category || "Other",
+    marketYes,
+    marketNo,
+    aiYes,
+    aiNo: 100 - aiYes,
+    edge: getEdge(m),
+    confidence: getConfidence(m),
+    volume: number(m.volume),
+    liquidity: number(m.liquidity),
+    signal: getSignal(m)
   };
 }
 
-function setStatus(text, type = ""){
-  const el = $("status");
+function renderStats(stats){
 
-  el.textContent = text;
-  el.className = "status " + type;
-}
-
-function updateStats(){
-  const s = stats || {};
+  if(!stats){
+    $("statMarkets").textContent = allMarkets.length;
+    return;
+  }
 
   $("statMarkets").textContent =
-    number(s.total || markets.length).toLocaleString();
+    number(stats.total).toLocaleString();
 
   $("statActive").textContent =
-    number(s.active).toLocaleString();
+    number(stats.active).toLocaleString();
 
   $("statVolume").textContent =
-    money(s.totalVolume);
+    money(stats.totalVolume);
 
   $("statLiquidity").textContent =
-    money(s.totalLiquidity);
+    money(stats.totalLiquidity);
 
-  $("statAvgYes").textContent =
-    percent(s.avgYesProbability);
+  $("statYes").textContent =
+    percent(stats.avgYesProbability);
 
-  $("statUpdated").textContent =
-    new Date().toLocaleTimeString();
+  $("statOpp").textContent =
+    number(stats.opportunities).toLocaleString();
 }
 
-function render(){
+function renderOpportunity(m){
+
+  const edge = m.edge;
+  const edgeClass =
+    edge > 0 ? "positive" :
+    edge < 0 ? "negative" :
+    "neutral-text";
+
+  const signalClassName =
+    signalClass(m.signal.side);
+
+  const confidence = Math.round(m.confidence);
+
+  return `
+    <div class="opportunity">
+
+      <div class="market-question">
+        ${escapeHtml(m.question)}
+      </div>
+
+      <div class="ai-row">
+
+        <div class="ai-box">
+          <div class="ai-box-label">Market</div>
+          <div class="ai-box-value">
+            ${m.marketYes.toFixed(1)}%
+          </div>
+        </div>
+
+        <div class="ai-box">
+          <div class="ai-box-label">AI Prediction</div>
+          <div class="ai-box-value">
+            ${m.aiYes.toFixed(1)}%
+          </div>
+        </div>
+
+      </div>
+
+      <div class="signal">
+
+        <div class="edge ${edgeClass}">
+          ${edge >= 0 ? "+" : ""}${edge.toFixed(1)}% EDGE
+        </div>
+
+        <div class="badge ${signalClassName}">
+          ${escapeHtml(signalText(m))}
+        </div>
+
+      </div>
+
+      <div class="confidence">
+        Confidence ${confidence}%
+      </div>
+
+    </div>
+  `;
+}
+
+function renderTop(){
+
+  const top = [...allMarkets]
+    .sort((a,b) =>
+      Math.abs(b.edge) - Math.abs(a.edge)
+    )
+    .slice(0,6);
+
+  $("topCount").textContent =
+    `${top.length} selected`;
+
+  if(!top.length){
+    $("opportunities").innerHTML =
+      `<div class="empty">No AI opportunities found.</div>`;
+    return;
+  }
+
+  $("opportunities").innerHTML =
+    top.map(renderOpportunity).join("");
+}
+
+function getFilteredMarkets(){
+
   const search =
-    $("search").value.trim().toLowerCase();
+    $("search").value
+      .trim()
+      .toLowerCase();
 
   const filter =
     $("signalFilter").value;
@@ -517,288 +829,294 @@ function render(){
   const sort =
     $("sort").value;
 
-  let data = markets
-    .map(normalizeMarket)
-    .filter(m => {
+  let result = allMarkets.filter(m => {
 
-      const matchesSearch =
-        !search ||
-        m.question.toLowerCase().includes(search) ||
-        String(m.category || "")
-          .toLowerCase()
-          .includes(search);
+    const matchesSearch =
+      !search ||
+      m.question.toLowerCase().includes(search) ||
+      m.category.toLowerCase().includes(search);
 
-      const matchesSignal =
-        filter === "all" ||
-        m.signal === filter;
+    let matchesSignal = true;
 
-      return matchesSearch && matchesSignal;
-    });
+    if(filter === "STRONG"){
+      matchesSignal =
+        m.signal.strength === "STRONG";
+    }
 
-  data.sort((a,b) => {
+    else if(filter === "YES"){
+      matchesSignal =
+        m.signal.side === "YES";
+    }
 
-    if(sort === "liquidity")
-      return b.liquidity - a.liquidity;
+    else if(filter === "NO"){
+      matchesSignal =
+        m.signal.side === "NO";
+    }
 
-    if(sort === "yes")
-      return b.yes - a.yes;
+    else if(filter === "NEUTRAL"){
+      matchesSignal =
+        m.signal.side === "NEUTRAL";
+    }
 
-    if(sort === "edge")
-      return Math.abs(b.edge ?? 0) -
-             Math.abs(a.edge ?? 0);
-
-    return b.volume - a.volume;
+    return matchesSearch && matchesSignal;
   });
 
-  $("message").style.display =
-    data.length ? "none" : "block";
+  result.sort((a,b) => {
 
-  $("message").textContent =
-    data.length
-      ? ""
-      : "No matching markets found.";
+    if(sort === "CONFIDENCE"){
+      return b.confidence - a.confidence;
+    }
 
-  $("grid").innerHTML =
-    data.map((m,index) => {
+    if(sort === "VOLUME"){
+      return b.volume - a.volume;
+    }
 
-      const signal = m.signal;
-      const cls = signalClass(signal);
+    if(sort === "LIQUIDITY"){
+      return b.liquidity - a.liquidity;
+    }
 
-      const aiText =
-        m.ai === null
-          ? "Not available"
-          : percent(m.ai);
+    if(sort === "AI"){
+      return b.aiYes - a.aiYes;
+    }
 
-      const edgeText =
-        m.edge === null
-          ? "—"
-          : percent(m.edge);
+    return Math.abs(b.edge) - Math.abs(a.edge);
+  });
 
-      return `
-        <article class="card">
+  return result;
+}
 
-          <div class="card-top">
-            <div class="rank">#${index + 1}</div>
+function renderMarkets(){
 
-            <span class="badge ${cls}">
-              ${escapeHtml(signal)}
-            </span>
-          </div>
+  const markets =
+    getFilteredMarkets();
 
-          <div class="question">
+  $("marketCount").textContent =
+    `${markets.length} markets`;
+
+  if(!markets.length){
+    $("markets").innerHTML =
+      `<div class="empty">No markets match your filter.</div>`;
+    return;
+  }
+
+  $("markets").innerHTML =
+    markets.map(renderCard).join("");
+}
+
+function renderCard(m){
+
+  const edge = m.edge;
+
+  const edgeClass =
+    edge > 0 ? "positive" :
+    edge < 0 ? "negative" :
+    "neutral-text";
+
+  const sClass =
+    signalClass(m.signal.side);
+
+  const confidence =
+    Math.max(0,Math.min(100,m.confidence));
+
+  return `
+    <div class="card">
+
+      <div class="card-top">
+
+        <div>
+          <div class="card-question">
             ${escapeHtml(m.question)}
           </div>
 
-          <div class="prices">
-
-            <div class="pricebox">
-              <div class="label">YES probability</div>
-              <div class="price">
-                ${percent(m.yes)}
-              </div>
-            </div>
-
-            <div class="pricebox">
-              <div class="label">NO probability</div>
-              <div class="price">
-                ${percent(m.no)}
-              </div>
-            </div>
-
+          <div class="category">
+            ${escapeHtml(m.category)}
           </div>
+        </div>
 
-          <div class="ai">
-            <div class="ai-title">
-              AI Prediction
-            </div>
+        <div class="badge ${sClass}">
+          ${escapeHtml(signalText(m))}
+        </div>
 
-            <div class="ai-value">
-              ${aiText}
-            </div>
+      </div>
 
-            ${
-              m.ai !== null
-              ? `<div class="sub">
-                   AI Edge: ${edgeText}
-                 </div>`
-              : ""
-            }
+      <div class="card-grid">
+
+        <div class="metric">
+          <div class="metric-label">Market YES</div>
+          <div class="metric-value">
+            ${m.marketYes.toFixed(1)}%
           </div>
+        </div>
 
-          <div class="meta">
-
-            <div class="meta-box">
-              <div class="meta-label">
-                SIGNAL
-              </div>
-              <div class="meta-value">
-                ${escapeHtml(signalText(m))}
-              </div>
-            </div>
-
-            <div class="meta-box">
-              <div class="meta-label">
-                VOLUME
-              </div>
-              <div class="meta-value">
-                ${money(m.volume)}
-              </div>
-            </div>
-
-            <div class="meta-box">
-              <div class="meta-label">
-                LIQUIDITY
-              </div>
-              <div class="meta-value">
-                ${money(m.liquidity)}
-              </div>
-            </div>
-
+        <div class="metric">
+          <div class="metric-label">AI YES</div>
+          <div class="metric-value">
+            ${m.aiYes.toFixed(1)}%
           </div>
+        </div>
 
-        </article>
-      `;
-    })
-    .join("");
+        <div class="metric">
+          <div class="metric-label">AI NO</div>
+          <div class="metric-value">
+            ${m.aiNo.toFixed(1)}%
+          </div>
+        </div>
+
+        <div class="metric">
+          <div class="metric-label">EDGE</div>
+          <div class="metric-value ${edgeClass}">
+            ${edge >= 0 ? "+" : ""}${edge.toFixed(1)}%
+          </div>
+        </div>
+
+        <div class="metric">
+          <div class="metric-label">CONFIDENCE</div>
+          <div class="metric-value">
+            ${Math.round(m.confidence)}%
+          </div>
+        </div>
+
+        <div class="metric">
+          <div class="metric-label">AI QUALITY</div>
+          <div class="metric-value">
+            ${number(m.modelQuality)}%
+          </div>
+        </div>
+
+      </div>
+
+      <div class="progress">
+        <div
+          class="progress-bar"
+          style="width:${confidence}%"
+        ></div>
+      </div>
+
+      <div class="meta">
+
+        <span>
+          Volume ${money(m.volume)}
+        </span>
+
+        <span>
+          Liquidity ${money(m.liquidity)}
+        </span>
+
+        <span>
+          AI Score ${number(m.signal?.score)}
+        </span>
+
+      </div>
+
+    </div>
+  `;
 }
 
-async function load(){
-  if(loading) return;
+async function loadMarkets(){
 
-  loading = true;
+  $("statusText").textContent =
+    "Updating...";
 
-  setStatus("Loading...");
+  $("statusDot").style.background =
+    "#f0b84b";
 
   try{
 
-    const response =
-      await fetch(
-        API + "?limit=100&details=true",
-        {
-          cache:"no-store",
-          headers:{
-            "Accept":"application/json"
-          }
-        }
-      );
+    const url =
+      `${API}?limit=100&details=true`;
 
-    if(!response.ok){
-      throw new Error(
-        "HTTP " + response.status
-      );
-    }
+    const response =
+      await fetch(url,{
+        cache:"no-store"
+      });
 
     const json =
       await response.json();
 
-    console.log("POLYMARKET API:", json);
-
-    if(!json || json.ok !== true){
+    if(!response.ok || !json.ok){
       throw new Error(
-        json?.error ||
         json?.message ||
-        "API returned ok:false"
+        json?.error ||
+        `HTTP ${response.status}`
       );
     }
 
-    if(!Array.isArray(json.markets)){
-      throw new Error(
-        "API response has no markets array"
-      );
-    }
+    const markets =
+      Array.isArray(json.markets)
+        ? json.markets
+        : [];
 
-    markets = json.markets;
+    allMarkets =
+      markets.map(normalizeMarket);
 
-    stats =
-      json.stats ||
-      {
-        total: markets.length,
-        active: markets.filter(
-          m => m.active && !m.closed
-        ).length,
-        totalVolume: markets.reduce(
-          (sum,m) =>
-            sum + number(m.volume),
-          0
-        ),
-        totalLiquidity: markets.reduce(
-          (sum,m) =>
-            sum + number(m.liquidity),
-          0
-        ),
-        avgYesProbability:
-          markets.length
-            ? markets.reduce(
-                (sum,m) =>
-                  sum + getYes(m),
-                0
-              ) /
-              markets.length *
-              100
-            : 0
-      };
+    lastUpdated =
+      json.timestamp || Date.now();
 
-    updateStats();
-    render();
+    renderStats(json.stats);
+    renderTop();
+    renderMarkets();
 
-    setStatus(
-      markets.length
-        ? "LIVE • " + markets.length + " markets"
-        : "API OK • No markets",
-      markets.length ? "ok" : ""
-    );
+    $("statusText").textContent =
+      "Live • " +
+      new Date(lastUpdated).toLocaleTimeString();
+
+    $("statusDot").style.background =
+      "#39d98a";
+
+    $("statusDot").style.boxShadow =
+      "0 0 12px #39d98a";
 
   }catch(error){
 
-    console.error(
-      "Dashboard API error:",
-      error
-    );
+    console.error(error);
 
-    markets = [];
+    $("statusText").textContent =
+      "API Error";
 
-    $("grid").innerHTML = "";
+    $("statusDot").style.background =
+      "#ff5366";
 
-    $("message").style.display = "block";
+    $("statusDot").style.boxShadow =
+      "0 0 12px #ff5366";
 
-    $("message").innerHTML =
-      "<strong>API connected but dashboard failed to load.</strong><br><br>" +
-      escapeHtml(error.message);
+    if(!allMarkets.length){
 
-    setStatus(
-      "API ERROR",
-      "err"
-    );
+      $("markets").innerHTML = `
+        <div class="error">
+          <strong>API Error</strong><br><br>
+          ${escapeHtml(error.message)}
+        </div>
+      `;
 
-  }finally{
-    loading = false;
+      $("opportunities").innerHTML = `
+        <div class="error">
+          Unable to load Polymarket data.
+        </div>
+      `;
+    }
+
   }
 }
 
-$("search").addEventListener(
-  "input",
-  render
-);
+$("refreshBtn")
+  .addEventListener("click",loadMarkets);
 
-$("signalFilter").addEventListener(
-  "change",
-  render
-);
+$("search")
+  .addEventListener("input",renderMarkets);
 
-$("sort").addEventListener(
-  "change",
-  render
-);
+$("signalFilter")
+  .addEventListener("change",renderMarkets);
 
-$("refresh").addEventListener(
-  "click",
-  load
-);
+$("sort")
+  .addEventListener("change",renderMarkets);
 
-load();
+loadMarkets();
 
+/*
+ * Auto refresh.
+ */
 setInterval(
-  load,
+  loadMarkets,
   60000
 );
 </script>
