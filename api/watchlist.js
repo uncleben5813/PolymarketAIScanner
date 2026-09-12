@@ -1,108 +1,96 @@
-const KEY = “poly_watchlist”;
+import { neon } from "@neondatabase/serverless";
 
-function hasKV() {
-return Boolean(
-process.env.KV_REST_API_URL &&
-process.env.KV_REST_API_TOKEN
-);
-}
-
-async function kv(path, options = {}) {
-const r = await fetch(
-${process.env.KV_REST_API_URL}${path},
-{
-…options,
-headers: {
-Authorization:
-Bearer ${process.env.KV_REST_API_TOKEN},
-…(options.headers || {})
-}
-}
-);
-
-if (!r.ok) throw new Error(KV ${r.status});
-return r.json();
-}
-
-async function getList() {
-if (!hasKV()) return [];
-
-const data = await kv(
-/get/${encodeURIComponent(KEY)}
-);
-
-if (!data?.result) return [];
-
-try {
-return JSON.parse(data.result);
-} catch {
-return [];
-}
-}
-
-async function saveList(list) {
-if (!hasKV()) return;
-
-await kv(
-/set/${encodeURIComponent(KEY)}/${encodeURIComponent(JSON.stringify(list))},
-{ method: “GET” }
-);
-}
+const sql = neon(process.env.DATABASE_URL);
 
 export default async function handler(req, res) {
-try {
-if (req.method === “GET”) {
-return res.status(200).json({
-ok: true,
-persistent: hasKV(),
-watchlist: await getList()
-});
-}
+  try {
+    if (req.method === "GET") {
+      const clientId = String(req.query.clientId || "");
 
-if (req.method === "POST") {
-  const body =
-    typeof req.body === "string"
-      ? JSON.parse(req.body)
-      : req.body || {};
-  const id = String(body.id || "");
-  if (!id) {
-    return res.status(400).json({
+      if (!clientId) {
+        return res.status(400).json({
+          ok: false,
+          error: "clientId required"
+        });
+      }
+
+      const rows = await sql`
+        SELECT
+          id,
+          client_id,
+          market_id,
+          question,
+          created_at
+        FROM watchlist
+        WHERE client_id = ${clientId}
+        ORDER BY created_at DESC
+      `;
+
+      return res.status(200).json({
+        ok: true,
+        watchlist: rows
+      });
+    }
+
+    const body = req.body || {};
+    const clientId = String(body.clientId || "");
+    const marketId = String(body.marketId || "");
+
+    if (!clientId || !marketId) {
+      return res.status(400).json({
+        ok: false,
+        error: "clientId and marketId required"
+      });
+    }
+
+    if (req.method === "POST") {
+      const question = String(body.question || "");
+
+      const rows = await sql`
+        INSERT INTO watchlist (
+          client_id,
+          market_id,
+          question
+        )
+        VALUES (
+          ${clientId},
+          ${marketId},
+          ${question}
+        )
+        ON CONFLICT (client_id, market_id)
+        DO UPDATE SET question = EXCLUDED.question
+        RETURNING *
+      `;
+
+      return res.status(200).json({
+        ok: true,
+        watchlist: rows[0]
+      });
+    }
+
+    if (req.method === "DELETE") {
+      await sql`
+        DELETE FROM watchlist
+        WHERE client_id = ${clientId}
+          AND market_id = ${marketId}
+      `;
+
+      return res.status(200).json({
+        ok: true
+      });
+    }
+
+    return res.status(405).json({
       ok: false,
-      error: "id required"
+      error: "Method not allowed"
+    });
+
+  } catch (error) {
+    console.error("watchlist error:", error);
+
+    return res.status(500).json({
+      ok: false,
+      error: error.message || "Internal server error"
     });
   }
-  const list = await getList();
-  const exists = list.some(x => x.id === id);
-  let next;
-  if (exists) {
-    next = list.filter(x => x.id !== id);
-  } else {
-    next = [
-      ...list,
-      {
-        id,
-        question: body.question || "",
-        category: body.category || "",
-        addedAt: Date.now()
-      }
-    ];
-  }
-  await saveList(next);
-  return res.status(200).json({
-    ok: true,
-    persistent: hasKV(),
-    watchlist: next
-  });
-}
-return res.status(405).json({
-  ok: false,
-  error: "Method not allowed"
-});
-
-} catch (error) {
-return res.status(500).json({
-ok: false,
-error: error.message
-});
-}
 }
