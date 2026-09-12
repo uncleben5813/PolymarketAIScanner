@@ -2,540 +2,656 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Polymarket AI Prediction Machine</title>
+
 <style>
 *{box-sizing:border-box}
-html,body{
- margin:0;
- padding:0;
- background:#070b12;
- color:#f4f7fb;
- font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif
+body{
+  margin:0;
+  background:#080b12;
+  color:#f4f7fb;
+  font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif
 }
-body{min-height:100vh}
-.container{width:min(1450px,100%);margin:auto;padding:15px}
-.header{
- display:flex;justify-content:space-between;align-items:center;
- gap:15px;margin-bottom:15px
+.wrap{max-width:1400px;margin:auto;padding:18px}
+header{
+  display:flex;justify-content:space-between;align-items:center;
+  gap:15px;margin-bottom:18px;flex-wrap:wrap
 }
-.brand h1{margin:0;font-size:24px;letter-spacing:-.7px}
-.brand p{margin:5px 0 0;color:#8995a7;font-size:12px}
-.status{display:flex;align-items:center;gap:7px;color:#8b97a8;font-size:11px}
-.dot{width:8px;height:8px;border-radius:50%;background:#39d98a;box-shadow:0 0 12px #39d98a}
+h1{font-size:24px;margin:0}
+.sub{color:#8791a5;font-size:13px;margin-top:4px}
+.status{
+  display:flex;align-items:center;gap:7px;
+  color:#8ee6a8;font-size:12px
+}
+.dot{
+  width:9px;height:9px;border-radius:50%;background:#38d879;
+  box-shadow:0 0 12px #38d879
+}
 .controls{
- display:grid;grid-template-columns:1fr 150px 150px auto;gap:8px;margin-bottom:12px
+  display:grid;
+  grid-template-columns:2fr 1fr 1fr auto;
+  gap:9px;margin-bottom:16px
 }
 input,select,button{
- width:100%;min-height:42px;border:1px solid #202a39;border-radius:9px;
- background:#0d131d;color:#fff;padding:0 12px;outline:none
+  border:1px solid #252c3a;
+  background:#101521;color:#fff;
+  border-radius:10px;padding:11px 12px;
+  font-size:13px;outline:none
 }
-button{cursor:pointer;background:#152234;font-weight:800}
-button:hover{background:#1d3049}
+button{cursor:pointer;font-weight:700}
+button:hover{border-color:#56617a}
 .stats{
- display:grid;grid-template-columns:repeat(8,1fr);gap:8px;margin-bottom:16px
+  display:grid;
+  grid-template-columns:repeat(6,1fr);
+  gap:10px;margin-bottom:18px
 }
-.stat{
- background:#0c121b;border:1px solid #1b2533;border-radius:12px;padding:12px
+.stat,.card,.panel{
+  background:#0e131d;
+  border:1px solid #202735;
+  border-radius:14px
 }
-.stat-label{
- color:#758195;font-size:9px;text-transform:uppercase;letter-spacing:.5px
+.stat{padding:14px}
+.stat b{display:block;font-size:21px;margin-top:5px}
+.label{font-size:11px;color:#7e899d;text-transform:uppercase;letter-spacing:.6px}
+.section-title{
+  display:flex;justify-content:space-between;align-items:center;
+  margin:22px 0 10px
 }
-.stat-value{margin-top:5px;font-size:19px;font-weight:900}
-.panel{
- background:#0c121b;border:1px solid #1b2533;border-radius:13px;padding:13px;margin-bottom:14px
-}
-.panel-head{
- display:flex;justify-content:space-between;align-items:center;margin-bottom:10px
-}
-.panel-head h2{font-size:16px;margin:0}
-.panel-head span{font-size:10px;color:#6d798b}
-.opportunities{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.opp{
- background:linear-gradient(145deg,#111a27,#090f17);
- border:1px solid #263446;border-radius:13px;padding:13px
-}
-.question{font-size:13px;font-weight:800;line-height:1.35;margin-bottom:9px}
-.mini-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
-.mini{
- background:#090e15;border:1px solid #18222e;border-radius:8px;padding:7px
-}
-.mini b{display:block;font-size:8px;color:#68768a;text-transform:uppercase}
-.mini strong{display:block;margin-top:3px;font-size:13px}
-.green{color:#48df95}.red{color:#ff6575}.muted{color:#9aa5b5}
-.badge{
- display:inline-block;padding:5px 7px;border-radius:6px;
- font-size:9px;font-weight:900;letter-spacing:.3px
-}
-.yes{color:#48df95;background:#0d241b}
-.no{color:#ff6878;background:#2a1117}
-.neutral{color:#a7b1bf;background:#182131}
-.low{color:#48df95;background:#0d241b}
-.medium{color:#f0c15b;background:#29220e}
-.high{color:#ff6878;background:#2a1117}
-.reason{margin-top:9px;color:#778498;font-size:10px;line-height:1.45}
-.markets{display:grid;gap:8px}
-.card{
- background:#0c121b;border:1px solid #1b2533;border-radius:12px;padding:12px
-}
-.card-top{
- display:flex;justify-content:space-between;gap:10px
-}
-.card-question{font-size:13px;font-weight:800;line-height:1.35}
-.category{margin-top:4px;color:#637084;font-size:10px}
+.section-title h2{font-size:17px;margin:0}
+.section-title span{font-size:11px;color:#768196}
 .grid{
- margin-top:10px;display:grid;grid-template-columns:repeat(9,1fr);gap:5px
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:12px
+}
+.card{padding:15px;position:relative}
+.card:hover{border-color:#39445a}
+.question{font-weight:700;line-height:1.35;margin:8px 0 12px}
+.meta{font-size:11px;color:#7e899d}
+.badges{display:flex;gap:6px;flex-wrap:wrap}
+.badge{
+  display:inline-block;border-radius:999px;
+  padding:4px 8px;font-size:10px;font-weight:800
+}
+.yes{background:#123c27;color:#62e89a}
+.no{background:#4a1720;color:#ff8191}
+.neutral{background:#272d38;color:#aab3c2}
+.strong{background:#40320b;color:#ffd65a}
+.low{background:#103d2a;color:#64e8a0}
+.medium{background:#44320c;color:#ffd05c}
+.high{background:#481821;color:#ff8494}
+.metrics{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:7px;margin-top:12px
 }
 .metric{
- background:#090e15;border:1px solid #18222e;border-radius:8px;padding:7px
+  background:#090d14;border-radius:9px;padding:9px
 }
-.metric label{display:block;font-size:8px;color:#68768a;text-transform:uppercase}
-.metric strong{display:block;margin-top:3px;font-size:12px}
-.bar{height:4px;background:#171f2a;border-radius:5px;margin-top:9px;overflow:hidden}
-.bar i{display:block;height:100%;background:#4c79a7}
-.meta{
- display:flex;flex-wrap:wrap;gap:12px;margin-top:8px;color:#697689;font-size:9px
+.metric span{display:block;color:#707b90;font-size:10px}
+.metric b{font-size:14px;margin-top:3px;display:block}
+.edge-pos{color:#58e79a}
+.edge-neg{color:#ff7183}
+.reason{
+  margin-top:10px;
+  padding:9px;
+  background:#0a0f17;
+  border-radius:9px;
+  color:#aab4c6;
+  font-size:11px;
+  line-height:1.45
 }
-.actions{display:flex;gap:6px;margin-top:9px}
-.actions button{min-height:32px;font-size:10px}
-.history{
- display:grid;grid-template-columns:repeat(5,1fr);gap:7px
-}
-.hitem{
- border:1px solid #192331;background:#090e15;border-radius:8px;padding:8px
-}
-.hitem b{font-size:10px;display:block;line-height:1.3}
-.hitem span{font-size:9px;color:#788598;display:block;margin-top:4px}
+.actions{display:flex;gap:7px;margin-top:10px}
+.actions button{flex:1;padding:8px;font-size:11px}
+.star{font-size:18px}
+.watch{border-color:#c8a53a}
 .empty{
- padding:25px;text-align:center;color:#718096;border:1px dashed #273242;border-radius:12px
+  padding:30px;text-align:center;color:#727d91;
+  border:1px dashed #293142;border-radius:14px
 }
-.error{
- padding:14px;border-radius:10px;background:#291219;border:1px solid #57202c;color:#ff7b89
+.panel{padding:15px;margin-top:14px}
+.progress{
+  height:8px;background:#202633;border-radius:10px;overflow:hidden
 }
-.footer{text-align:center;color:#536074;font-size:10px;padding:22px 0 10px}
-@media(max-width:1100px){
- .stats{grid-template-columns:repeat(4,1fr)}
- .grid{grid-template-columns:repeat(5,1fr)}
+.progress i{display:block;height:100%;background:#6d7cff}
+.accuracy{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:10px
 }
-@media(max-width:750px){
- .container{padding:10px}
- .brand h1{font-size:19px}
- .controls{grid-template-columns:1fr 1fr}
- .controls input{grid-column:1/-1}
- .stats{grid-template-columns:repeat(2,1fr)}
- .opportunities{grid-template-columns:1fr}
- .history{grid-template-columns:1fr 1fr}
- .grid{grid-template-columns:repeat(3,1fr)}
- .card-top{display:block}
+.accuracy .box{
+  background:#090e16;border-radius:10px;padding:12px
+}
+.notice{
+  display:none;
+  position:fixed;right:15px;bottom:15px;
+  max-width:330px;background:#121925;
+  border:1px solid #39445a;padding:13px;
+  border-radius:12px;z-index:99;
+  box-shadow:0 12px 40px #0008
+}
+.small{font-size:11px;color:#788399}
+@media(max-width:1000px){
+  .stats{grid-template-columns:repeat(3,1fr)}
+  .grid{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:650px){
+  .wrap{padding:11px}
+  h1{font-size:20px}
+  .controls{grid-template-columns:1fr 1fr}
+  .controls input{grid-column:1/-1}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .grid{grid-template-columns:1fr}
+  .accuracy{grid-template-columns:repeat(2,1fr)}
+  .metrics{grid-template-columns:repeat(2,1fr)}
 }
 </style>
 </head>
+
 <body>
-<div class="container">
-<div class="header">
- <div class="brand">
-  <h1>Polymarket AI Prediction Machine</h1>
-  <p>AI probability • Edge • Momentum • Order Book • Accuracy</p>
- </div>
- <div class="status">
-  <span class="dot" id="dot"></span>
-  <span id="status">Connecting...</span>
- </div>
-</div>
+<div class="wrap">
+
+<header>
+  <div>
+    <h1>Polymarket AI Prediction Machine</h1>
+    <div class="sub">AI opportunity scanner • probability • edge • confidence • risk</div>
+  </div>
+  <div class="status">
+    <i class="dot"></i>
+    <span id="status">Connecting...</span>
+  </div>
+</header>
+
 <div class="controls">
- <input id="search" type="search" placeholder="Search markets...">
- <select id="filter">
-  <option value="ALL">All Signals</option>
-  <option value="STRONG">Strong</option>
-  <option value="YES">YES</option>
-  <option value="NO">NO</option>
-  <option value="LOW">Low Risk</option>
- </select>
- <select id="sort">
-  <option value="OPP">Opportunity</option>
-  <option value="EDGE">Edge</option>
-  <option value="CONF">Confidence</option>
-  <option value="MOM">Momentum</option>
-  <option value="VOL">Volume</option>
-  <option value="LIQ">Liquidity</option>
- </select>
- <button id="refresh">Refresh</button>
+  <input id="search" placeholder="Search markets...">
+
+  <select id="signal">
+    <option value="ALL">ALL SIGNALS</option>
+    <option value="STRONG">STRONG</option>
+    <option value="YES">YES</option>
+    <option value="NO">NO</option>
+    <option value="NEUTRAL">NEUTRAL</option>
+  </select>
+
+  <select id="sort">
+    <option value="EDGE">EDGE</option>
+    <option value="CONFIDENCE">CONFIDENCE</option>
+    <option value="VOLUME">VOLUME</option>
+    <option value="LIQUIDITY">LIQUIDITY</option>
+    <option value="AI">AI SCORE</option>
+  </select>
+
+  <button id="refresh">Refresh</button>
 </div>
+
 <div class="stats">
- <div class="stat"><div class="stat-label">Markets</div><div class="stat-value" id="sMarkets">—</div></div>
- <div class="stat"><div class="stat-label">Active</div><div class="stat-value" id="sActive">—</div></div>
- <div class="stat"><div class="stat-label">Volume</div><div class="stat-value" id="sVolume">—</div></div>
- <div class="stat"><div class="stat-label">Liquidity</div><div class="stat-value" id="sLiquidity">—</div></div>
- <div class="stat"><div class="stat-label">Opportunities</div><div class="stat-value" id="sOpp">—</div></div>
- <div class="stat"><div class="stat-label">Strong</div><div class="stat-value" id="sStrong">—</div></div>
- <div class="stat"><div class="stat-label">AI Accuracy</div><div class="stat-value" id="sAccuracy">—</div></div>
- <div class="stat"><div class="stat-label">Low Risk</div><div class="stat-value" id="sLow">—</div></div>
+  <div class="stat">
+    <div class="label">Markets</div>
+    <b id="markets">-</b>
+  </div>
+  <div class="stat">
+    <div class="label">Active</div>
+    <b id="active">-</b>
+  </div>
+  <div class="stat">
+    <div class="label">Volume</div>
+    <b id="volume">-</b>
+  </div>
+  <div class="stat">
+    <div class="label">Liquidity</div>
+    <b id="liquidity">-</b>
+  </div>
+  <div class="stat">
+    <div class="label">Avg YES</div>
+    <b id="avgYes">-</b>
+  </div>
+  <div class="stat">
+    <div class="label">Opportunities</div>
+    <b id="opportunities">-</b>
+  </div>
 </div>
+
 <div class="panel">
- <div class="panel-head">
-  <h2>🔥 Top AI Opportunities</h2>
-  <span id="oppCount">—</span>
- </div>
- <div id="opportunities" class="opportunities"></div>
+  <div class="section-title">
+    <h2>AI Performance</h2>
+    <span id="trackingStatus">Browser tracking active</span>
+  </div>
+
+  <div class="accuracy">
+    <div class="box">
+      <div class="label">Predictions</div>
+      <b id="predCount">0</b>
+    </div>
+    <div class="box">
+      <div class="label">Resolved</div>
+      <b id="resolvedCount">0</b>
+    </div>
+    <div class="box">
+      <div class="label">Correct</div>
+      <b id="correctCount">0</b>
+    </div>
+    <div class="box">
+      <div class="label">Accuracy</div>
+      <b id="accuracyPct">0%</b>
+    </div>
+  </div>
+
+  <div style="margin-top:12px" class="progress">
+    <i id="accuracyBar" style="width:0%"></i>
+  </div>
 </div>
-<div class="panel">
- <div class="panel-head">
-  <h2>⭐ Watchlist</h2>
-  <span id="watchCount">0</span>
- </div>
- <div id="watchlist" class="markets">
-  <div class="empty">No watchlist markets.</div>
- </div>
+
+<div class="section-title">
+  <h2>Top AI Opportunities</h2>
+  <span id="topInfo">-</span>
 </div>
-<div class="panel">
- <div class="panel-head">
-  <h2>📚 AI Prediction History</h2>
-  <span id="historyInfo">Loading...</span>
- </div>
- <div id="history" class="history"></div>
+
+<div id="topGrid" class="grid"></div>
+
+<div class="section-title">
+  <h2>Watchlist</h2>
+  <span>Saved on this device</span>
 </div>
-<div class="panel">
- <div class="panel-head">
+
+<div id="watchGrid" class="grid"></div>
+
+<div class="section-title">
   <h2>All Markets</h2>
-  <span id="marketCount">—</span>
- </div>
- <div id="markets" class="markets">
-  <div class="empty">Loading markets...</div>
- </div>
+  <span id="allInfo">-</span>
 </div>
-<div class="footer">
- Polymarket AI Prediction Machine • Auto refresh 60s • Heuristic AI model
+
+<div id="marketGrid" class="grid"></div>
+
 </div>
-</div>
+
+<div id="notice" class="notice"></div>
+
 <script>
-const API="/api/markets";
-let allMarkets=[];
-let watchlist=[];
-let history=[];
-const $=id=>document.getElementById(id);
-function n(v){
- const x=Number(v);
- return Number.isFinite(x)?x:0;
-}
+const API = "/api/markets";
+
+let allMarkets = [];
+let watchlist = JSON.parse(localStorage.getItem("pm_watchlist") || "[]");
+let predictions = JSON.parse(localStorage.getItem("pm_predictions") || "[]");
+
+const $ = id => document.getElementById(id);
+
 function money(v){
- const x=n(v);
- if(x>=1e9)return "$"+(x/1e9).toFixed(2)+"B";
- if(x>=1e6)return "$"+(x/1e6).toFixed(2)+"M";
- if(x>=1e3)return "$"+(x/1e3).toFixed(1)+"K";
- return "$"+x.toFixed(0);
+  v = Number(v || 0);
+  if(v >= 1e9) return "$" + (v/1e9).toFixed(2) + "B";
+  if(v >= 1e6) return "$" + (v/1e6).toFixed(2) + "M";
+  if(v >= 1e3) return "$" + (v/1e3).toFixed(1) + "K";
+  return "$" + v.toFixed(0);
 }
+
+function pct(v){
+  return (Number(v || 0) * 100).toFixed(1) + "%";
+}
+
 function esc(v){
- return String(v??"")
- .replaceAll("&","&amp;")
- .replaceAll("<","&lt;")
- .replaceAll(">","&gt;")
- .replaceAll('"',"&quot;")
- .replaceAll("'","&#039;");
+  return String(v ?? "")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
 }
-function sideClass(side){
- return side==="YES"?"yes":side==="NO"?"no":"neutral";
+
+function signalBadge(m){
+  const strong = Math.abs(Number(m.edgePct || 0)) >= 2 &&
+                 Number(m.opportunityScore || m.aiScore || 0) >= 60;
+
+  if(strong){
+    return `<span class="badge strong">STRONG</span>`;
+  }
+
+  if(m.signal === "YES"){
+    return `<span class="badge yes">YES</span>`;
+  }
+
+  if(m.signal === "NO"){
+    return `<span class="badge no">NO</span>`;
+  }
+
+  return `<span class="badge neutral">NEUTRAL</span>`;
 }
-function riskClass(r){
- return String(r||"MEDIUM").toLowerCase();
+
+function riskBadge(risk){
+  const r = String(risk || "HIGH").toUpperCase();
+  return `<span class="badge ${r.toLowerCase()}">${esc(r)}</span>`;
 }
-function isWatched(id){
- return watchlist.some(x=>String(x.id)===String(id));
-}
-function normalize(m){
- const marketYes=n(m?.yes?.probability??m?.marketYes);
- const aiYes=n(m?.aiYes??m?.modelYes??marketYes);
- return {
-  ...m,
-  marketYes:marketYes<=1?marketYes*100:marketYes,
-  marketNo:n(m?.no?.probability??m?.marketNo)<=1
-    ?n(m?.no?.probability??m?.marketNo)*100
-    :n(m?.no?.probability??m?.marketNo),
-  aiYes:aiYes<=1?aiYes*100:aiYes,
-  aiNo:100-(aiYes<=1?aiYes*100:aiYes),
-  edge:n(m.edgePct??m.edge),
-  confidence:n(m.confidence),
-  volume:n(m.volume),
-  liquidity:n(m.liquidity),
-  momentum:n(m.momentum),
-  opportunityScore:n(m.opportunityScore),
-  modelQuality:n(m.modelQuality),
-  signal:m.signal||{side:"NEUTRAL",strength:"LOW",score:0},
-  risk:m.risk||"MEDIUM"
- };
-}
-function renderStats(stats){
- $("sMarkets").textContent=n(stats?.total).toLocaleString();
- $("sActive").textContent=n(stats?.active).toLocaleString();
- $("sVolume").textContent=money(stats?.totalVolume);
- $("sLiquidity").textContent=money(stats?.totalLiquidity);
- $("sOpp").textContent=n(stats?.opportunities).toLocaleString();
- $("sStrong").textContent=n(stats?.strongSignals).toLocaleString();
- $("sLow").textContent=n(stats?.lowRisk).toLocaleString();
-}
-function renderOpportunity(m){
- const side=m.signal?.side||"NEUTRAL";
- const edge=m.edge;
- return `
- <div class="opp">
-  <div class="question">${esc(m.question)}</div>
-  <div style="margin-bottom:8px">
-   <span class="badge ${sideClass(side)}">
-    ${esc(m.recommendation||side)}
-   </span>
-   <span class="badge ${riskClass(m.risk)}">${esc(m.risk)}</span>
-  </div>
-  <div class="mini-grid">
-   <div class="mini"><b>Market</b><strong>${m.marketYes.toFixed(1)}%</strong></div>
-   <div class="mini"><b>AI</b><strong>${m.aiYes.toFixed(1)}%</strong></div>
-   <div class="mini"><b>Edge</b><strong class="${edge>=0?"green":"red"}">${edge>=0?"+":""}${edge.toFixed(1)}%</strong></div>
-   <div class="mini"><b>Score</b><strong>${Math.round(m.opportunityScore)}</strong></div>
-  </div>
-  <div class="reason">${esc(m.reasoning||"No reasoning available.")}</div>
-  <div class="actions">
-   <button onclick="toggleWatch('${esc(m.id)}')">
-    ${isWatched(m.id)?"★ Watching":"☆ Watch"}
-   </button>
-   <button onclick="savePrediction('${esc(m.id)}')">🎯 Track AI</button>
-  </div>
- </div>`;
-}
-function renderTop(){
- const top=[...allMarkets]
- .sort((a,b)=>b.opportunityScore-a.opportunityScore)
- .slice(0,6);
- $("oppCount").textContent=top.length+" selected";
- $("opportunities").innerHTML=top.length
- ?top.map(renderOpportunity).join("")
- :`<div class="empty">No opportunities.</div>`;
-}
-function filtered(){
- const q=$("search").value.trim().toLowerCase();
- const f=$("filter").value;
- const s=$("sort").value;
- let list=allMarkets.filter(m=>{
-  const text=(m.question+" "+m.category).toLowerCase();
-  if(q&&!text.includes(q))return false;
-  if(f==="STRONG"&&m.signal?.strength!=="STRONG")return false;
-  if(f==="YES"&&m.signal?.side!=="YES")return false;
-  if(f==="NO"&&m.signal?.side!=="NO")return false;
-  if(f==="LOW"&&m.risk!=="LOW")return false;
-  return true;
- });
- list.sort((a,b)=>{
-  if(s==="EDGE")return Math.abs(b.edge)-Math.abs(a.edge);
-  if(s==="CONF")return b.confidence-a.confidence;
-  if(s==="MOM")return b.momentum-a.momentum;
-  if(s==="VOL")return b.volume-a.volume;
-  if(s==="LIQ")return b.liquidity-a.liquidity;
-  return b.opportunityScore-a.opportunityScore;
- });
- return list;
-}
-function renderMarkets(){
- const list=filtered();
- $("marketCount").textContent=list.length+" markets";
- if(!list.length){
-  $("markets").innerHTML=`<div class="empty">No markets match.</div>`;
-  return;
- }
- $("markets").innerHTML=list.map(m=>{
-  const edge=m.edge;
-  const side=m.signal?.side||"NEUTRAL";
-  const book=m.orderBook||{};
+
+function card(m){
+  const id = String(m.id);
+  const watched = watchlist.includes(id);
+
+  const edge = Number(m.edgePct || 0);
+  const ai = Number(m.aiYes || 0);
+  const market = Number(m.marketYes || 0);
+  const score = Number(m.opportunityScore ?? m.aiScore ?? 0);
+  const confidence = Number(m.confidence || 0);
+
   return `
   <div class="card">
-   <div class="card-top">
-    <div>
-     <div class="card-question">${esc(m.question)}</div>
-     <div class="category">${esc(m.category)}</div>
+    <div class="badges">
+      ${signalBadge(m)}
+      ${riskBadge(m.risk)}
+      <span class="badge neutral">${esc(m.category || "General")}</span>
     </div>
-    <div>
-     <span class="badge ${sideClass(side)}">${esc(m.signal?.strength||"LOW")} ${esc(side)}</span>
-     <span class="badge ${riskClass(m.risk)}">${esc(m.risk)}</span>
+
+    <div class="question">${esc(m.question)}</div>
+
+    <div class="meta">
+      ${m.active && !m.closed ? "ACTIVE" : "INACTIVE"}
+      ${m.acceptingOrders ? " • ORDER BOOK" : ""}
     </div>
-   </div>
-   <div class="grid">
-    <div class="metric"><label>Market YES</label><strong>${m.marketYes.toFixed(1)}%</strong></div>
-    <div class="metric"><label>AI YES</label><strong>${m.aiYes.toFixed(1)}%</strong></div>
-    <div class="metric"><label>AI NO</label><strong>${m.aiNo.toFixed(1)}%</strong></div>
-    <div class="metric"><label>EDGE</label><strong class="${edge>=0?"green":"red"}">${edge>=0?"+":""}${edge.toFixed(1)}%</strong></div>
-    <div class="metric"><label>CONF</label><strong>${Math.round(m.confidence)}%</strong></div>
-    <div class="metric"><label>QUALITY</label><strong>${Math.round(m.modelQuality)}%</strong></div>
-    <div class="metric"><label>MOMENTUM</label><strong>${Math.round(m.momentum)}</strong></div>
-    <div class="metric"><label>SCORE</label><strong>${Math.round(m.opportunityScore)}</strong></div>
-    <div class="metric"><label>BOOK</label><strong>${esc(book.pressure||"—")}</strong></div>
-   </div>
-   <div class="bar">
-    <i style="width:${Math.max(0,Math.min(100,m.confidence))}%"></i>
-   </div>
-   <div class="meta">
-    <span>Volume ${money(m.volume)}</span>
-    <span>Liquidity ${money(m.liquidity)}</span>
-    <span>24H ${money(m.volume24h)}</span>
-    <span>Spread ${book.spread!=null?Number(book.spread).toFixed(2)+"%":"—"}</span>
-    <span>Depth ${money((book.bidDepth||0)+(book.askDepth||0))}</span>
-   </div>
-   <div class="reason">${esc(m.recommendation||"")} — ${esc(m.reasoning||"")}</div>
-   <div class="actions">
-    <button onclick="toggleWatch('${esc(m.id)}')">
-     ${isWatched(m.id)?"★ Remove Watchlist":"☆ Add Watchlist"}
-    </button>
-    <button onclick="savePrediction('${esc(m.id)}')">🎯 Save Prediction</button>
-   </div>
+
+    <div class="metrics">
+      <div class="metric">
+        <span>Market YES</span>
+        <b>${pct(market)}</b>
+      </div>
+
+      <div class="metric">
+        <span>AI YES</span>
+        <b>${pct(ai)}</b>
+      </div>
+
+      <div class="metric">
+        <span>EDGE</span>
+        <b class="${edge >= 0 ? "edge-pos" : "edge-neg"}">
+          ${edge >= 0 ? "+" : ""}${edge.toFixed(2)}%
+        </b>
+      </div>
+
+      <div class="metric">
+        <span>CONFIDENCE</span>
+        <b>${confidence.toFixed(0)}%</b>
+      </div>
+
+      <div class="metric">
+        <span>AI SCORE</span>
+        <b>${score.toFixed(0)}</b>
+      </div>
+
+      <div class="metric">
+        <span>QUALITY</span>
+        <b>${(Number(m.marketQuality || 0) * 100).toFixed(0)}%</b>
+      </div>
+
+      <div class="metric">
+        <span>VOLUME</span>
+        <b>${money(m.volume)}</b>
+      </div>
+
+      <div class="metric">
+        <span>LIQUIDITY</span>
+        <b>${money(m.liquidity)}</b>
+      </div>
+    </div>
+
+    <div class="reason">
+      <b>AI:</b> ${esc(m.reasoning || "No reasoning available.")}
+    </div>
+
+    <div class="actions">
+      <button onclick="toggleWatch('${esc(id)}')">
+        <span class="star">${watched ? "★" : "☆"}</span>
+        ${watched ? "WATCHING" : "WATCH"}
+      </button>
+
+      <button onclick="savePrediction('${esc(id)}')">
+        TRACK AI
+      </button>
+    </div>
   </div>`;
- }).join("");
 }
-async function loadMarkets(){
- $("status").textContent="Updating...";
- $("dot").style.background="#f0b84b";
- try{
-  const r=await fetch(`${API}?limit=100&details=true`,{cache:"no-store"});
-  const j=await r.json();
-  if(!r.ok||!j.ok)
-   throw new Error(j.message||j.error||`HTTP ${r.status}`);
-  allMarkets=(j.markets||[]).map(normalize);
-  renderStats(j.stats);
-  renderTop();
-  renderMarkets();
-  $("status").textContent=
-   "Live • "+new Date(j.timestamp).toLocaleTimeString();
-  $("dot").style.background="#39d98a";
-  await saveSnapshots();
-  await loadHistory();
-  await loadWatchlist();
- }catch(e){
-  console.error(e);
-  $("status").textContent="API Error";
-  $("dot").style.background="#ff5366";
-  if(!allMarkets.length){
-   $("markets").innerHTML=
-    `<div class="error"><b>API Error</b><br>${esc(e.message)}</div>`;
+
+function renderTop(){
+  const top = [...allMarkets]
+    .filter(m => Number(m.opportunityScore ?? m.aiScore ?? 0) >= 50)
+    .sort((a,b) =>
+      Number(b.opportunityScore ?? b.aiScore ?? 0) -
+      Number(a.opportunityScore ?? a.aiScore ?? 0)
+    )
+    .slice(0,6);
+
+  $("topInfo").textContent = `${top.length} best opportunities`;
+
+  $("topGrid").innerHTML = top.length
+    ? top.map(card).join("")
+    : `<div class="empty">No strong AI opportunities right now.</div>`;
+}
+
+function renderWatch(){
+  const watched = allMarkets.filter(m =>
+    watchlist.includes(String(m.id))
+  );
+
+  $("watchGrid").innerHTML = watched.length
+    ? watched.map(card).join("")
+    : `<div class="empty">Watchlist empty. Press WATCH on any market.</div>`;
+}
+
+function renderMarkets(){
+  const q = $("search").value.toLowerCase().trim();
+  const sig = $("signal").value;
+  const sort = $("sort").value;
+
+  let list = allMarkets.filter(m => {
+    const question = String(m.question || "").toLowerCase();
+
+    if(q && !question.includes(q)) return false;
+
+    if(sig === "YES" && m.signal !== "YES") return false;
+    if(sig === "NO" && m.signal !== "NO") return false;
+    if(sig === "NEUTRAL" && m.signal !== "NEUTRAL") return false;
+
+    if(sig === "STRONG"){
+      const strong =
+        Math.abs(Number(m.edgePct || 0)) >= 2 &&
+        Number(m.opportunityScore ?? m.aiScore ?? 0) >= 60;
+
+      if(!strong) return false;
+    }
+
+    return true;
+  });
+
+  list.sort((a,b) => {
+    if(sort === "EDGE")
+      return Math.abs(Number(b.edgePct || 0)) -
+             Math.abs(Number(a.edgePct || 0));
+
+    if(sort === "CONFIDENCE")
+      return Number(b.confidence || 0) -
+             Number(a.confidence || 0);
+
+    if(sort === "VOLUME")
+      return Number(b.volume || 0) -
+             Number(a.volume || 0);
+
+    if(sort === "LIQUIDITY")
+      return Number(b.liquidity || 0) -
+             Number(a.liquidity || 0);
+
+    return Number(b.opportunityScore ?? b.aiScore ?? 0) -
+           Number(a.opportunityScore ?? a.aiScore ?? 0);
+  });
+
+  $("allInfo").textContent =
+    `${list.length} shown / ${allMarkets.length} total`;
+
+  $("marketGrid").innerHTML = list.length
+    ? list.map(card).join("")
+    : `<div class="empty">No markets match your filter.</div>`;
+}
+
+function renderStats(stats){
+  $("markets").textContent =
+    stats?.markets ?? allMarkets.length;
+
+  $("active").textContent =
+    stats?.active ??
+    allMarkets.filter(m => m.active && !m.closed).length;
+
+  $("volume").textContent =
+    money(stats?.volume ??
+      allMarkets.reduce((s,m)=>s+Number(m.volume||0),0));
+
+  $("liquidity").textContent =
+    money(stats?.liquidity ??
+      allMarkets.reduce((s,m)=>s+Number(m.liquidity||0),0));
+
+  $("avgYes").textContent =
+    stats?.avgYesPct != null
+      ? Number(stats.avgYesPct).toFixed(1) + "%"
+      : "0%";
+
+  $("opportunities").textContent =
+    stats?.opportunities ??
+    allMarkets.filter(m =>
+      Number(m.opportunityScore ?? m.aiScore ?? 0) >= 60
+    ).length;
+}
+
+function showNotice(text){
+  const n = $("notice");
+  n.textContent = text;
+  n.style.display = "block";
+
+  clearTimeout(window.noticeTimer);
+  window.noticeTimer = setTimeout(() => {
+    n.style.display = "none";
+  }, 3000);
+}
+
+function toggleWatch(id){
+  if(watchlist.includes(id)){
+    watchlist = watchlist.filter(x => x !== id);
+    showNotice("Removed from watchlist");
+  }else{
+    watchlist.push(id);
+    showNotice("Added to watchlist");
   }
- }
+
+  localStorage.setItem(
+    "pm_watchlist",
+    JSON.stringify(watchlist)
+  );
+
+  renderTop();
+  renderWatch();
+  renderMarkets();
 }
-async function saveSnapshots(){
- const top=allMarkets
- .filter(m=>m.signal?.strength==="STRONG")
- .slice(0,10);
- await Promise.all(
-  top.map(m=>fetch("/api/history",{
-   method:"POST",
-   headers:{"Content-Type":"application/json"},
-   body:JSON.stringify({
-    marketId:m.id,
-    question:m.question,
-    prediction:m.signal.side,
-    marketProbability:m.marketYes,
-    aiProbability:m.aiYes,
-    edge:m.edge,
-    confidence:m.confidence,
-    opportunityScore:m.opportunityScore,
-    risk:m.risk
-   })
-  }).catch(()=>null))
- );
+
+function savePrediction(id){
+  const m = allMarkets.find(x => String(x.id) === id);
+  if(!m) return;
+
+  const prediction = {
+    id,
+    question: m.question,
+    createdAt: Date.now(),
+    aiYes: Number(m.aiYes || 0),
+    marketYes: Number(m.marketYes || 0),
+    signal: m.signal,
+    edgePct: Number(m.edgePct || 0),
+    confidence: Number(m.confidence || 0),
+    resolved: false,
+    correct: null
+  };
+
+  predictions.push(prediction);
+
+  if(predictions.length > 500){
+    predictions = predictions.slice(-500);
+  }
+
+  localStorage.setItem(
+    "pm_predictions",
+    JSON.stringify(predictions)
+  );
+
+  renderPerformance();
+  showNotice("AI prediction saved");
 }
-async function loadHistory(){
- try{
-  const r=await fetch("/api/history",{cache:"no-store"});
-  const j=await r.json();
-  history=j.history||[];
-  $("sAccuracy").textContent=
-   j.accuracy==null?"—":j.accuracy+"%";
-  $("historyInfo").textContent=
-   `${j.total||0} predictions • ${j.correct||0} correct`;
-  const recent=history.slice(0,10);
-  $("history").innerHTML=recent.length
-   ?recent.map(x=>`
-    <div class="hitem">
-     <b>${esc(x.question||"Market")}</b>
-     <span>${esc(x.prediction)} • Edge ${n(x.edge).toFixed(1)}%</span>
-     <span>Confidence ${n(x.confidence).toFixed(0)}% • ${esc(x.result)}</span>
-    </div>
-   `).join("")
-   :`<div class="empty">No prediction history yet.</div>`;
- }catch{}
+
+function renderPerformance(){
+  const resolved = predictions.filter(x => x.resolved);
+  const correct = resolved.filter(x => x.correct === true);
+
+  const accuracy =
+    resolved.length
+      ? correct.length / resolved.length * 100
+      : 0;
+
+  $("predCount").textContent = predictions.length;
+  $("resolvedCount").textContent = resolved.length;
+  $("correctCount").textContent = correct.length;
+  $("accuracyPct").textContent =
+    accuracy.toFixed(1) + "%";
+
+  $("accuracyBar").style.width =
+    Math.min(100, accuracy) + "%";
 }
-async function loadWatchlist(){
- try{
-  const r=await fetch("/api/watchlist",{cache:"no-store"});
-  const j=await r.json();
-  watchlist=j.watchlist||[];
-  $("watchCount").textContent=watchlist.length;
-  const watched=watchlist.map(w=>
-   allMarkets.find(m=>String(m.id)===String(w.id))
-  ).filter(Boolean);
-  $("watchlist").innerHTML=watched.length
-   ?watched.map(renderWatch).join("")
-   :`<div class="empty">No watchlist markets.</div>`;
- }catch{}
+
+async function load(){
+  $("status").textContent = "Loading...";
+
+  try{
+    const response = await fetch(
+      API + "?limit=60&details=true",
+      {cache:"no-store"}
+    );
+
+    const data = await response.json();
+
+    if(!response.ok || !data.ok){
+      throw new Error(
+        data.message ||
+        data.error ||
+        "API request failed"
+      );
+    }
+
+    allMarkets = Array.isArray(data.markets)
+      ? data.markets
+      : [];
+
+    renderStats(data.stats || {});
+    renderTop();
+    renderWatch();
+    renderMarkets();
+    renderPerformance();
+
+    $("status").textContent =
+      `Live • ${new Date().toLocaleTimeString()}`;
+
+  }catch(error){
+    console.error(error);
+
+    $("status").textContent = "API ERROR";
+
+    $("topGrid").innerHTML =
+      `<div class="empty">
+        API error: ${esc(error.message)}
+      </div>`;
+
+    $("marketGrid").innerHTML = "";
+
+    showNotice("API error: " + error.message);
+  }
 }
-function renderWatch(m){
- return `
- <div class="card">
-  <div class="card-top">
-   <div>
-    <div class="card-question">${esc(m.question)}</div>
-    <div class="category">${esc(m.category)}</div>
-   </div>
-   <span class="badge ${sideClass(m.signal?.side)}">
-    ${esc(m.recommendation||"NEUTRAL")}
-   </span>
-  </div>
-  <div class="meta">
-   <span>Market ${m.marketYes.toFixed(1)}%</span>
-   <span>AI ${m.aiYes.toFixed(1)}%</span>
-   <span>Edge ${m.edge>=0?"+":""}${m.edge.toFixed(1)}%</span>
-   <span>Confidence ${m.confidence}%</span>
-  </div>
-  <div class="actions">
-   <button onclick="toggleWatch('${esc(m.id)}')">★ Remove</button>
-  </div>
- </div>`;
-}
-async function toggleWatch(id){
- const m=allMarkets.find(x=>String(x.id)===String(id));
- if(!m)return;
- await fetch("/api/watchlist",{
-  method:"POST",
-  headers:{"Content-Type":"application/json"},
-  body:JSON.stringify({
-   id:m.id,
-   question:m.question,
-   category:m.category
-  })
- });
- await loadWatchlist();
- renderTop();
- renderMarkets();
-}
-async function savePrediction(id){
- const m=allMarkets.find(x=>String(x.id)===String(id));
- if(!m)return;
- await fetch("/api/history",{
-  method:"POST",
-  headers:{"Content-Type":"application/json"},
-  body:JSON.stringify({
-   marketId:m.id,
-   question:m.question,
-   prediction:m.signal?.side||"NEUTRAL",
-   marketProbability:m.marketYes,
-   aiProbability:m.aiYes,
-   edge:m.edge,
-   confidence:m.confidence,
-   opportunityScore:m.opportunityScore,
-   risk:m.risk
-  })
- });
- await loadHistory();
- alert("AI prediction saved.");
-}
-$("refresh").onclick=loadMarkets;
-$("search").oninput=renderMarkets;
-$("filter").onchange=renderMarkets;
-$("sort").onchange=renderMarkets;
-loadMarkets();
-setInterval(loadMarkets,60000);
+
+$("refresh").addEventListener("click", load);
+$("search").addEventListener("input", renderMarkets);
+$("signal").addEventListener("change", renderMarkets);
+$("sort").addEventListener("change", renderMarkets);
+
+renderPerformance();
+load();
+
+setInterval(load, 60000);
 </script>
+
 </body>
 </html>
