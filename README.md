@@ -1,23 +1,10 @@
-# Polymarket AI Scanner V1
+# Polymarket AI Prediction Machine V2
 
-GitHub + Vercel dashboard that reads active Polymarket markets and displays:
-- live market YES probability
-- model estimate
-- edge
-- confidence
-- volume
-- search/sort
-- 60-second refresh
+V2 replaces the old artificial low-price uplift with a transparent model:
+- Polymarket YES price is the baseline.
+- Recent CLOB price history contributes a small momentum signal.
+- Uncertainty shrinks the edge when history is short/noisy.
+- Liquidity/volume contribute to confidence, not direction.
+- No API key is required for public market-data reads.
 
-## Deploy
-1. Upload these files to a GitHub repository.
-2. Import the repository into Vercel.
-3. Deploy.
-4. Open the Vercel URL.
-
-No Polymarket API key is required for this read-only V1.
-
-## Important
-The V1 model is deliberately transparent and statistical. It is NOT a trained AI model and must not be presented as guaranteed predictive power. Before real-money use, add historical data, proper backtesting, calibration, and independent validation.
-
-No wallet or automatic trading is included.
+Important: this is not a trained ML model and does not guarantee profitable predictions. The next serious upgrade is to store predictions, observe resolved outcomes, and calculate Brier score/log loss against the market baseline.

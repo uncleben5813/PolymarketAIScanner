@@ -1,5 +1,1 @@
-{
-  "functions": {
-    "api/markets.js": { "maxDuration": 10 }
-  }
-}
+{"functions":{"api/markets.js":{"maxDuration":10}}}
