@@ -1,1 +1,8 @@
-{"name":"polymarket-ai-scanner-v6","version":"6.0.0","private":true,"dependencies":{"@neondatabase/serverless":"^1.0.2"}}
+{
+  "name": "polymarket-ai-scanner",
+  "version": "2.0.0",
+  "private": true,
+  "dependencies": {
+    "@neondatabase/serverless": "^1.0.2"
+  }
+}
