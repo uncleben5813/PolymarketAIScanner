@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Polymarket AI Scanner</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,-apple-system,sans-serif;background:#071018;color:#eaf2f8}
+.wrap{max-width:1200px;margin:auto;padding:20px}.hero{display:flex;justify-content:space-between;gap:15px;align-items:center;margin-bottom:18px}
+h1{margin:0;font-size:26px}.sub{color:#91a4b5;font-size:13px;margin-top:5px}
+.controls{display:flex;gap:8px;flex-wrap:wrap;margin:15px 0}input,select,button{background:#0d1b26;border:1px solid #203544;color:#eaf2f8;border-radius:10px;padding:10px 12px}input{flex:1;min-width:220px}button{cursor:pointer}button:hover{background:#132737}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:15px}.stat,.card{background:#0b1822;border:1px solid #1b303f;border-radius:14px}.stat{padding:14px}.stat b{display:block;font-size:20px;margin-top:4px}.muted{color:#91a4b5;font-size:12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}.card{padding:15px}.question{font-weight:700;line-height:1.35;margin-bottom:12px}.row{display:flex;justify-content:space-between;gap:10px;margin:7px 0}.bar{height:7px;background:#142633;border-radius:8px;overflow:hidden}.bar i{display:block;height:100%;background:#46d39a}.edge{font-size:20px;font-weight:800}.green{color:#46d39a}.red{color:#ff7180}.yellow{color:#ffd166}.tag{display:inline-block;border:1px solid #274454;border-radius:999px;padding:4px 8px;font-size:11px;color:#9fc0d2;margin-bottom:8px}
+footer{color:#718899;font-size:11px;text-align:center;padding:25px}.empty{padding:35px;text-align:center;color:#91a4b5}
+@media(max-width:700px){.stats{grid-template-columns:repeat(2,1fr)}.hero{align-items:flex-start;flex-direction:column}}
+</style></head>
+<body><main class="wrap">
+<section class="hero"><div><h1>🤖 Polymarket AI Scanner</h1><div class="sub">Live markets • model estimate • edge • confidence</div></div><button id="refresh">↻ Refresh</button></section>
+<div class="controls"><input id="search" placeholder="Search markets, e.g. bitcoin, Trump, Fed..."><select id="sort"><option value="edge">Best edge</option><option value="volume">Volume</option><option value="confidence">Confidence</option></select></div>
+<section class="stats"><div class="stat"><span class="muted">Active markets</span><b id="count">—</b></div><div class="stat"><span class="muted">Analysed</span><b id="analysed">—</b></div><div class="stat"><span class="muted">Top edge</span><b id="top">—</b></div><div class="stat"><span class="muted">Updated</span><b id="updated">—</b></div></section>
+<section id="grid" class="grid"><div class="empty">Loading live Polymarket markets…</div></section>
+<footer>Model output is an estimate, not a guarantee. No automatic trading is performed.</footer>
+</main>
+<script>
+const state={items:[]};
+const $=id=>document.getElementById(id);
+function pct(x){return (Number(x)*100).toFixed(1)+'%'}
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+function render(){
+ let q=$('search').value.toLowerCase(), sort=$('sort').value;
+ let a=state.items.filter(x=>(x.question||'').toLowerCase().includes(q)||(x.category||'').toLowerCase().includes(q));
+ a.sort((x,y)=>sort==='volume'?y.volume-x.volume:sort==='confidence'?y.confidence-x.confidence:y.edge-x.edge);
+ $('count').textContent=state.items.length;$('analysed').textContent=a.length;
+ $('top').textContent=a.length?(a[0].edge>=0?'+':'')+a[0].edge.toFixed(1)+'%':'—';
+ $('grid').innerHTML=a.length?a.slice(0,100).map(x=>{
+  let cls=x.edge>=5?'green':x.edge<=-5?'red':'yellow';
+  return `<article class="card"><span class="tag">${esc(x.category||'Market')}</span>
+  <div class="question">${esc(x.question)}</div>
+  <div class="row"><span>Market YES</span><b>${pct(x.marketYes)}</b></div>
+  <div class="bar"><i style="width:${Math.max(0,Math.min(100,x.marketYes*100))}%"></i></div>
+  <div class="row"><span>AI estimate</span><b>${pct(x.aiYes)}</b></div>
+  <div class="row"><span>Edge</span><b class="edge ${cls}">${x.edge>=0?'+':''}${x.edge.toFixed(1)}%</b></div>
+  <div class="row"><span>Confidence</span><b>${x.confidence}/100</b></div>
+  <div class="row"><span class="muted">Volume</span><span class="muted">$${Math.round(x.volume).toLocaleString()}</span></div>
+  </article>`}).join(''):'<div class="empty">No markets found.</div>';
+}
+async function load(){
+ $('grid').innerHTML='<div class="empty">Loading live Polymarket markets…</div>';
+ try{let r=await fetch('/api/markets');let d=await r.json();if(!r.ok)throw Error(d.error||'API error');state.items=d.markets||[];$('updated').textContent=new Date().toLocaleTimeString();render()}
+ catch(e){$('grid').innerHTML='<div class="empty">API error: '+esc(e.message)+'</div>'}
+}
+$('refresh').onclick=load;$('search').oninput=render;$('sort').onchange=render;load();setInterval(load,60000);
+</script></body></html>
