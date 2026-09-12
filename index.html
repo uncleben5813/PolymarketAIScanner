@@ -1,65 +1,23 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Polymarket AI Prediction Machine</title>
-<style>
-*{box-sizing:border-box}body{margin:0;background:#0b1020;color:#eef2ff;font:14px system-ui,-apple-system,Segoe UI,sans-serif}
-.wrap{max-width:1200px;margin:auto;padding:18px}.top{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
-h1{font-size:22px;margin:0}.muted{color:#9aa6c1}.bar{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}
-input,select,button{background:#111a30;color:#eef2ff;border:1px solid #273453;border-radius:10px;padding:10px}
-input{min-width:220px;flex:1}button{cursor:pointer}.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
-.stat,.card{background:#10182c;border:1px solid #202d4b;border-radius:14px}.stat{padding:12px}.stat b{display:block;font-size:20px;margin-top:4px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin-top:14px}
-.card{padding:14px}.q{font-weight:650;line-height:1.35;margin-bottom:8px}.row{display:flex;justify-content:space-between;gap:10px;margin:7px 0}.pill{padding:3px 8px;border-radius:999px;background:#18233e}
-.edge{font-size:22px;font-weight:800}.pos{color:#5ee39b}.neg{color:#ff7d91}.meter{height:7px;background:#202b46;border-radius:8px;overflow:hidden}.meter i{display:block;height:100%;background:#7c8cff}
-small{color:#93a0ba}.footer{margin:18px 0;color:#7f8ba6;font-size:12px}
-@media(max-width:700px){.stats{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}}
-</style>
-</head>
-<body>
-<div class="wrap">
-<div class="top"><div><h1>🤖 Polymarket AI Prediction Machine</h1><div class="muted">Market baseline + momentum + liquidity + uncertainty</div></div><button id="refresh">↻ Refresh</button></div>
-<div class="bar"><input id="search" placeholder="Search market..."><select id="sort"><option value="edge">Best edge</option><option value="confidence">Confidence</option><option value="volume">Volume</option><option value="uncertainty">Lowest uncertainty</option></select><select id="minconf"><option value="0">All confidence</option><option value="60">60%+</option><option value="70">70%+</option><option value="80">80%+</option></select></div>
-<div class="stats"><div class="stat">Active markets<b id="active">—</b></div><div class="stat">Analysed<b id="analysed">—</b></div><div class="stat">Best edge<b id="best">—</b></div><div class="stat">High confidence<b id="high">—</b></div><div class="stat">Updated<b id="updated">—</b></div></div>
-<div id="status" class="muted" style="margin:14px 0">Loading...</div><div id="grid" class="grid"></div>
-<div class="footer">V2 is a statistical scanner, not a guaranteed predictor. Edge is an estimate after uncertainty adjustment. Validate with historical outcomes before risking money.</div>
-</div>
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Polymarket AI Prediction Machine V3</title>
+<style>*{box-sizing:border-box}body{margin:0;background:#090f1d;color:#edf2ff;font:14px system-ui}.wrap{max-width:1200px;margin:auto;padding:18px}h1{margin:0;font-size:22px}.muted,small{color:#94a0ba}.top{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}.bar{display:flex;gap:8px;flex-wrap:wrap;margin:15px 0}input,select,button{background:#111a2e;color:#edf2ff;border:1px solid #293654;border-radius:10px;padding:10px}input{flex:1;min-width:210px}.stats{display:grid;grid-template-columns:repeat(6,1fr);gap:9px}.stat,.card{background:#10182a;border:1px solid #202d49;border-radius:14px}.stat{padding:11px}.stat b{display:block;font-size:19px;margin-top:4px}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:11px;margin-top:13px}.card{padding:14px}.q{font-weight:700;line-height:1.35;margin-bottom:8px}.row{display:flex;justify-content:space-between;gap:8px;margin:7px 0}.edge{font-size:21px;font-weight:800}.pos{color:#55dda0}.neg{color:#ff7c91}.tag{display:inline-block;padding:3px 7px;border-radius:999px;background:#192440;font-size:11px}.meter{height:6px;background:#202b45;border-radius:8px;overflow:hidden}.meter i{display:block;height:100%;background:#7f8cff}.footer{margin-top:18px;font-size:12px;color:#78859e}@media(max-width:700px){.stats{grid-template-columns:repeat(2,1fr)}} </style></head>
+<body><div class="wrap"><div class="top"><div><h1>🧠 Polymarket AI Prediction Machine V3</h1><div class="muted">Calibrated edge scanner + model tracking</div></div><button onclick="load()">↻ Refresh</button></div>
+<div class="bar"><input id="q" placeholder="Search market..."><select id="s"><option value="edge">Best edge</option><option value="confidence">Confidence</option><option value="volume">Volume</option></select><select id="c"><option value="0">All confidence</option><option value="60">60%+</option><option value="70">70%+</option><option value="80">80%+</option></select></div>
+<div class="stats"><div class="stat">Active<b id="a">—</b></div><div class="stat">Analysed<b id="n">—</b></div><div class="stat">High confidence<b id="h">—</b></div><div class="stat">Best edge<b id="be">—</b></div><div class="stat">Model Brier<b id="bs">Pending</b></div><div class="stat">Updated<b id="u">—</b></div></div>
+<div id="st" class="muted" style="margin:14px 0">Loading...</div><div id="grid" class="grid"></div>
+<div class="footer">V3 tracks predictions separately from realised outcomes. Until enough resolved markets exist, Brier/Log Loss remain Pending. This is analytics, not a guarantee of profit.</div></div>
 <script>
-let DATA=[];
-const $=id=>document.getElementById(id);
-function pct(x){return (Number(x)*100).toFixed(1)+'%'}
-function money(x){x=Number(x)||0; if(x>=1e9)return '$'+(x/1e9).toFixed(1)+'B';if(x>=1e6)return '$'+(x/1e6).toFixed(1)+'M';if(x>=1e3)return '$'+(x/1e3).toFixed(1)+'K';return '$'+x.toFixed(0)}
-function render(){
- const q=$('search').value.toLowerCase(), mc=Number($('minconf').value);
- let a=DATA.filter(x=>(x.question||'').toLowerCase().includes(q)&&Number(x.confidence)>=mc);
- const s=$('sort').value;
- a.sort((x,y)=>s==='confidence'?y.confidence-x.confidence:s==='volume'?y.volume-x.volume:s==='uncertainty'?x.uncertainty-y.uncertainty:y.edge-x.edge);
- $('grid').innerHTML=a.slice(0,300).map(x=>{
-  const cls=x.edge>=0?'pos':'neg';
-  return `<div class="card"><div class="q">${x.question||'Unknown market'}</div>
-  <div class="row"><span>Market YES</span><b>${pct(x.marketYes)}</b></div>
-  <div class="row"><span>Model YES</span><b>${pct(x.modelYes)}</b></div>
-  <div class="row"><span>Adjusted edge</span><b class="edge ${cls}">${x.edge>=0?'+':''}${(x.edge*100).toFixed(2)}%</b></div>
-  <div class="row"><span>Confidence</span><b>${x.confidence}%</b></div><div class="meter"><i style="width:${x.confidence}%"></i></div>
-  <div class="row"><small>Momentum ${x.momentum>=0?'+':''}${(x.momentum*100).toFixed(2)}% · Uncertainty ${(x.uncertainty*100).toFixed(2)}%</small></div>
-  <div class="row"><small>Liquidity ${money(x.liquidity)} · Volume ${money(x.volume)}</small></div>
-  <div class="row"><small>${x.dataQuality||''}</small></div></div>`}).join('');
- $('status').textContent=`Showing ${a.length} markets · model uses live market probability as baseline`;
+let D=[];
+const $=x=>document.getElementById(x), pct=x=>(x*100).toFixed(1)+'%', money=x=>{x=+x||0;return x>=1e6?'$'+(x/1e6).toFixed(1)+'M':x>=1e3?'$'+(x/1e3).toFixed(1)+'K':'$'+x.toFixed(0)};
+function render(){let q=$('q').value.toLowerCase(),mc=+$('c').value,a=D.filter(x=>(x.question||'').toLowerCase().includes(q)&&x.confidence>=mc);let s=$('s').value;
+a.sort((x,y)=>s==='confidence'?y.confidence-x.confidence:s==='volume'?y.volume-x.volume:y.edge-x.edge);
+$('grid').innerHTML=a.map(x=>`<div class="card"><span class="tag">${x.dataQuality}</span><div class="q">${x.question}</div>
+<div class="row"><span>Market YES</span><b>${pct(x.marketYes)}</b></div><div class="row"><span>AI YES</span><b>${pct(x.modelYes)}</b></div>
+<div class="row"><span>Adjusted edge</span><b class="edge ${x.edge>=0?'pos':'neg'}">${x.edge>=0?'+':''}${(x.edge*100).toFixed(2)}%</b></div>
+<div class="row"><span>Confidence</span><b>${x.confidence}%</b></div><div class="meter"><i style="width:${x.confidence}%"></i></div>
+<div class="row"><small>Momentum ${(x.momentum*100).toFixed(2)}% · Uncertainty ${(x.uncertainty*100).toFixed(2)}%</small></div>
+<div class="row"><small>Liquidity ${money(x.liquidity)} · Volume ${money(x.volume)}</small></div></div>`).join('');
+$('st').textContent=`${a.length} markets shown · V3 uses market price as prior and records model quality separately`;
 }
-async function load(){
- $('status').textContent='Loading live Polymarket data...';
- try{
-  const r=await fetch('/api/markets?limit=300',{cache:'no-store'}); const j=await r.json();
-  if(!j.ok) throw new Error(j.error||'API error'); DATA=j.markets||[];
-  $('active').textContent=j.activeMarkets??DATA.length; $('analysed').textContent=DATA.length;
-  const best=DATA.reduce((a,b)=>b.edge>a.edge?b:a,DATA[0]); $('best').textContent=best?((best.edge*100).toFixed(2)+'%'):'—';
-  $('high').textContent=DATA.filter(x=>x.confidence>=75).length; $('updated').textContent=new Date().toLocaleTimeString();
-  render();
- }catch(e){$('status').textContent='API error: '+e.message}
-}
-['search','sort','minconf'].forEach(id=>$(id).addEventListener('input',render)); $('refresh').onclick=load; load();
-setInterval(load,60000);
-</script>
-</body></html>
+async function load(){try{$('st').textContent='Loading live data...';let r=await fetch('/api/markets?limit=300',{cache:'no-store'}),j=await r.json();if(!j.ok)throw Error(j.error);D=j.markets||[];$('a').textContent=j.activeMarkets??D.length;$('n').textContent=D.length;$('h').textContent=D.filter(x=>x.confidence>=75).length;let b=D[0];$('be').textContent=b?((b.edge*100).toFixed(2)+'%'):'—';$('bs').textContent=j.metrics?.brier==null?'Pending':j.metrics.brier.toFixed(4);$('u').textContent=new Date().toLocaleTimeString();render()}catch(e){$('st').textContent='API error: '+e.message}}
+['q','s','c'].forEach(x=>$(x).addEventListener('input',render));load();setInterval(load,60000);
+</script></body></html>

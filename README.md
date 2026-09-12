@@ -1,10 +1,12 @@
-# Polymarket AI Prediction Machine V2
+# Polymarket AI Prediction Machine V3
 
-V2 replaces the old artificial low-price uplift with a transparent model:
-- Polymarket YES price is the baseline.
-- Recent CLOB price history contributes a small momentum signal.
-- Uncertainty shrinks the edge when history is short/noisy.
-- Liquidity/volume contribute to confidence, not direction.
-- No API key is required for public market-data reads.
+V3 improves the scanner and introduces a metrics layer. It deliberately does NOT fake a historical win rate or Brier score when no resolved prediction database exists.
 
-Important: this is not a trained ML model and does not guarantee profitable predictions. The next serious upgrade is to store predictions, observe resolved outcomes, and calculate Brier score/log loss against the market baseline.
+Current model:
+- Market YES probability is the prior.
+- CLOB history supplies a small momentum signal.
+- Uncertainty shrinks edge.
+- Liquidity/volume affect confidence.
+- Brier and Log Loss are shown as Pending until resolved predictions are persisted.
+
+Next serious backend upgrade: add persistent storage for prediction snapshots, resolve outcomes, and calculate Brier/Log Loss over time.
