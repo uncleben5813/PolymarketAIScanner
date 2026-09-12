@@ -1,746 +1,567 @@
-const GAMMA = 'https://gamma-api.polymarket.com';
-const CLOB = 'https://clob.polymarket.com';
+// api/market.js
+
+const GAMMA = "https://gamma-api.polymarket.com";
+const CLOB = "https://clob.polymarket.com";
 
 function arr(v) {
   if (Array.isArray(v)) return v;
   try {
-    return JSON.parse(v || '[]');
+    return JSON.parse(v || "[]");
   } catch {
     return [];
   }
 }
 
-function clamp(x, a, b) {
-  return Math.max(a, Math.min(b, x));
+function num(v, fallback = 0) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
 }
 
-function yes(m) {
-  const outcomes = arr(m.outcomes);
-  const prices = arr(m.outcomePrices);
-
-  const i = outcomes.findIndex(
-    x => String(x).toLowerCase() === 'yes'
-  );
-
-  return i >= 0 ? Number(prices[i]) : NaN;
+function clamp(x, min, max) {
+  return Math.max(min, Math.min(max, x));
 }
 
-function binary(m) {
-  const outcomes = arr(m.outcomes).map(x =>
-    String(x).toLowerCase()
-  );
-
-  return (
-    outcomes.length === 2 &&
-    outcomes.includes('yes') &&
-    outcomes.includes('no')
-  );
+function probability(v) {
+  return clamp(num(v), 0, 1);
 }
 
-function token(m) {
-  const ids = arr(m.clobTokenIds);
-  const outcomes = arr(m.outcomes);
-
-  const i = outcomes.findIndex(
-    x => String(x).toLowerCase() === 'yes'
-  );
-
-  return ids[i >= 0 ? i : 0] || null;
+function pct(v) {
+  return Number((probability(v) * 100).toFixed(2));
 }
 
-/* -------------------------------------------------------
-   DATABASE
-------------------------------------------------------- */
-
-async function sqlExec(q, params = []) {
-  const { neon } = await import('@neondatabase/serverless');
-
-  if (!process.env.DATABASE_URL) {
-    throw new Error('DATABASE_URL missing');
-  }
-
-  const sql = neon(process.env.DATABASE_URL);
-  return sql(q, params);
-}
-
-async function ensure() {
-  await sqlExec(`
-    CREATE TABLE IF NOT EXISTS predictions (
-      id BIGSERIAL PRIMARY KEY,
-      market_id TEXT NOT NULL,
-      question TEXT,
-      predicted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-
-      model_p DOUBLE PRECISION NOT NULL,
-      market_p DOUBLE PRECISION NOT NULL,
-
-      confidence INT,
-      edge DOUBLE PRECISION,
-
-      outcome INT,
-      resolved_at TIMESTAMPTZ,
-
-      UNIQUE (market_id, predicted_at)
-    )
-  `);
-
-  await sqlExec(`
-    CREATE INDEX IF NOT EXISTS predictions_market_idx
-    ON predictions(market_id)
-  `);
-
-  await sqlExec(`
-    CREATE INDEX IF NOT EXISTS predictions_outcome_idx
-    ON predictions(outcome)
-  `);
-}
-
-async function loadDB() {
-  await ensure();
-
-  const resolved = await sqlExec(`
-    SELECT
-      market_id,
-      question,
-      predicted_at,
-      model_p,
-      market_p,
-      confidence,
-      edge,
-      outcome
-    FROM predictions
-    WHERE outcome IS NOT NULL
-    ORDER BY predicted_at DESC
-    LIMIT 3000
-  `);
-
-  const tracked = await sqlExec(`
-    SELECT COUNT(*)::int AS n
-    FROM predictions
-  `);
-
-  return {
-    resolved,
-    tracked: tracked[0]?.n || 0
-  };
-}
-
-/* -------------------------------------------------------
-   HISTORY
-------------------------------------------------------- */
-
-async function hist(t) {
-  if (!t) return [];
-
+function safeJson(v, fallback = {}) {
   try {
-    const u = new URL(`${CLOB}/prices-history`);
-
-    u.searchParams.set('market', t);
-    u.searchParams.set('interval', '1d');
-    u.searchParams.set('fidelity', '60');
-
-    const r = await fetch(u);
-
-    if (!r.ok) return [];
-
-    const j = await r.json();
-
-    return Array.isArray(j.history)
-      ? j.history
-      : [];
+    if (typeof v === "object" && v !== null) return v;
+    return JSON.parse(v || JSON.stringify(fallback));
   } catch {
-    return [];
+    return fallback;
   }
 }
 
-/* -------------------------------------------------------
-   MODEL
-------------------------------------------------------- */
-
-function baseModel(m, history, cal) {
-  let p = clamp(yes(m), 0.001, 0.999);
-
-  const pts = history
-    .map(x => Number(x.p))
-    .filter(Number.isFinite);
-
-  let momentum = 0;
-  let volatility = 0;
-
-  if (pts.length >= 4) {
-    const recent = pts.slice(-6);
-    const older = pts.slice(-12, -6);
-
-    const recentAvg =
-      recent.reduce((a, b) => a + b, 0) /
-      recent.length;
-
-    const olderAvg = older.length
-      ? older.reduce((a, b) => a + b, 0) /
-        older.length
-      : pts[0];
-
-    momentum = clamp(
-      recentAvg - olderAvg,
-      -0.15,
-      0.15
-    );
-
-    const diffs = [];
-
-    for (let i = 1; i < pts.length; i++) {
-      diffs.push(pts[i] - pts[i - 1]);
+async function fetchJson(url, options = {}) {
+  const r = await fetch(url, {
+    ...options,
+    headers: {
+      Accept: "application/json",
+      ...(options.headers || {})
     }
+  });
 
-    volatility = Math.sqrt(
-      diffs.reduce((a, b) => a + b * b, 0) /
-      Math.max(1, diffs.length)
+  const text = await r.text();
+
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    data = text;
+  }
+
+  if (!r.ok) {
+    throw new Error(
+      `${r.status} ${r.statusText}: ${
+        typeof data === "string" ? data : JSON.stringify(data)
+      }`
     );
   }
 
-  const liquidity = Math.max(
-    0,
-    Number(m.liquidity || 0)
+  return data;
+}
+
+function normalizeMarket(market) {
+  const outcomes = arr(market.outcomes);
+  const prices = arr(market.outcomePrices);
+  const tokens = arr(market.clobTokenIds);
+
+  const yesIndex = outcomes.findIndex(
+    x => String(x).toLowerCase() === "yes"
   );
 
-  const depth = clamp(
-    Math.log10(liquidity + 1) / 6,
-    0,
-    1
+  const noIndex = outcomes.findIndex(
+    x => String(x).toLowerCase() === "no"
   );
 
-  const sample = clamp(
-    pts.length / 24,
-    0,
-    1
-  );
+  const yesPrice =
+    yesIndex >= 0
+      ? probability(prices[yesIndex])
+      : probability(prices[0]);
 
-  const noise = clamp(
-    volatility * 4,
-    0,
-    1
-  );
+  const noPrice =
+    noIndex >= 0
+      ? probability(prices[noIndex])
+      : probability(prices[1]);
 
-  const uncertainty = clamp(
-    0.045 +
-      (1 - sample) * 0.045 +
-      noise * 0.08 -
-      depth * 0.018,
-    0.018,
-    0.13
-  );
+  const yesToken =
+    yesIndex >= 0
+      ? tokens[yesIndex]
+      : tokens[0];
 
-  let raw = clamp(
-    p + momentum * 0.22,
-    0.001,
-    0.999
-  );
+  const noToken =
+    noIndex >= 0
+      ? tokens[noIndex]
+      : tokens[1];
 
-  let edge =
-    (raw - p) *
-    clamp(0.85 - uncertainty * 2, 0.55, 0.85) *
-    (1 - uncertainty * 2.5);
-
-  let candidate = clamp(
-    p + edge,
-    0.001,
-    0.999
-  );
-
-  /* Calibration */
-
-  const bucket =
-    Math.min(
-      90,
-      Math.floor(candidate * 100 / 10) * 10
-    );
-
-  const adjustment = cal[bucket];
-
-  if (
-    adjustment &&
-    adjustment.n >= 20
-  ) {
-    candidate = clamp(
-      candidate +
-        (adjustment.actual -
-          adjustment.predicted) *
-        0.35,
-      0.001,
-      0.999
-    );
-  }
-
-  edge = candidate - p;
-
-  const confidence = clamp(
-    Math.round(
-      52 +
-      depth * 15 +
-      sample * 18 +
-      (1 - noise) * 12 -
-      uncertainty * 55
-    ),
-    50,
-    90
+  const volume = num(market.volume);
+  const liquidity = num(market.liquidity);
+  const volume24h = num(
+    market.volume24hr ??
+    market.volume24h ??
+    market.volume24Hr
   );
 
   return {
-    marketYes: p,
-    modelYes: candidate,
-    edge,
-    confidence,
-    momentum,
-    uncertainty,
+    id: market.id ?? null,
+    question: market.question ?? "",
+    slug: market.slug ?? "",
+
+    conditionId:
+      market.conditionId ??
+      market.condition_id ??
+      null,
+
+    category: market.category ?? "",
+    description: market.description ?? "",
+
+    image: market.image ?? null,
+    icon: market.icon ?? null,
+
+    active: Boolean(market.active),
+    closed: Boolean(market.closed),
+    archived: Boolean(market.archived),
+    restricted: Boolean(market.restricted),
+
+    featured: Boolean(market.featured),
+    new: Boolean(market.new),
+
+    startDate: market.startDate ?? null,
+    endDate: market.endDate ?? null,
+    closedTime: market.closedTime ?? null,
+
+    outcomes,
+    outcomePrices: prices,
+
+    yes: {
+      price: yesPrice,
+      probability: pct(yesPrice),
+      tokenId: yesToken ?? null
+    },
+
+    no: {
+      price: noPrice,
+      probability: pct(noPrice),
+      tokenId: noToken ?? null
+    },
+
+    volume,
+    volume24h,
     liquidity,
-    volume: Number(m.volume || 0),
 
-    dataQuality:
-      pts.length >= 12
-        ? 'history+liquidity'
-        : pts.length >= 4
-          ? 'short history'
-          : 'market baseline'
+    enableOrderBook:
+      market.enableOrderBook !== false,
+
+    orderPriceMinTickSize:
+      num(market.orderPriceMinTickSize, 0.01),
+
+    minimumOrderSize:
+      num(market.minimumOrderSize),
+
+    negRisk:
+      Boolean(market.negRisk),
+
+    negRiskMarketID:
+      market.negRiskMarketID ??
+      market.negRiskMarketId ??
+      null,
+
+    raw: market
   };
 }
 
-/* -------------------------------------------------------
-   CALIBRATION
-------------------------------------------------------- */
+async function getOrderBook(tokenId) {
+  if (!tokenId) return null;
 
-function calibration(rows) {
-  const buckets = {};
-
-  for (const x of rows) {
-    const p =
-      x.model_p ??
-      x.p;
-
-    const y = x.outcome;
-
-    if (
-      p == null ||
-      y == null
-    ) {
-      continue;
-    }
-
-    const k =
-      Math.min(
-        90,
-        Math.floor(p * 100 / 10) * 10
-      );
-
-    buckets[k] ??= {
-      n: 0,
-      p: 0,
-      y: 0
-    };
-
-    buckets[k].n++;
-    buckets[k].p += p;
-    buckets[k].y += y;
-  }
-
-  for (const k of Object.keys(buckets)) {
-    buckets[k].predicted =
-      buckets[k].p /
-      buckets[k].n;
-
-    buckets[k].actual =
-      buckets[k].y /
-      buckets[k].n;
-  }
-
-  return buckets;
-}
-
-/* -------------------------------------------------------
-   MARKET RESOLUTION
-------------------------------------------------------- */
-
-async function getMarket(id) {
   try {
-    const r = await fetch(
-      `${GAMMA}/markets/${encodeURIComponent(id)}`
+    const data = await fetchJson(
+      `${CLOB}/book?token_id=${encodeURIComponent(tokenId)}`
     );
 
-    if (!r.ok) return null;
+    const bids = Array.isArray(data.bids) ? data.bids : [];
+    const asks = Array.isArray(data.asks) ? data.asks : [];
 
-    return await r.json();
+    const bestBid =
+      bids.length > 0
+        ? num(bids[0].price)
+        : null;
+
+    const bestAsk =
+      asks.length > 0
+        ? num(asks[0].price)
+        : null;
+
+    const spread =
+      bestBid !== null && bestAsk !== null
+        ? bestAsk - bestBid
+        : null;
+
+    return {
+      bestBid,
+      bestAsk,
+      spread,
+      spreadPct:
+        spread !== null
+          ? Number((spread * 100).toFixed(3))
+          : null,
+
+      bids,
+      asks,
+
+      timestamp: Date.now()
+    };
   } catch {
     return null;
   }
 }
 
-async function getClosed(ids) {
-  if (!ids.length) return [];
+async function getPriceHistory(tokenId) {
+  if (!tokenId) return null;
 
-  const results = [];
+  try {
+    const data = await fetchJson(
+      `${CLOB}/prices-history?market=${encodeURIComponent(
+        tokenId
+      )}&interval=1d&fidelity=60`
+    );
 
-  /*
-   Check in small batches to avoid
-   hammering Gamma API.
-  */
-
-  for (const id of ids.slice(0, 100)) {
-    const m = await getMarket(id);
-
-    if (!m || !binary(m)) {
-      continue;
-    }
-
-    const p = yes(m);
-
-    if (
-      !m.closed ||
-      !Number.isFinite(p)
-    ) {
-      continue;
-    }
-
-    let outcome = null;
-
-    if (p >= 0.99) {
-      outcome = 1;
-    } else if (p <= 0.01) {
-      outcome = 0;
-    }
-
-    if (outcome !== null) {
-      results.push({
-        id: String(id),
-        outcome
-      });
-    }
+    return data?.history || [];
+  } catch {
+    return [];
   }
-
-  return results;
 }
 
-/* -------------------------------------------------------
-   RESOLVE OLD PREDICTIONS
-------------------------------------------------------- */
+function calculateSignal(yes, no) {
+  const y = probability(yes);
+  const n = probability(no);
 
-async function resolveTrackedPredictions() {
-  const rows = await sqlExec(`
-    SELECT DISTINCT market_id
-    FROM predictions
-    WHERE outcome IS NULL
-    ORDER BY market_id
-    LIMIT 100
-  `);
+  if (y >= 0.80) {
+    return {
+      side: "YES",
+      strength: "VERY_STRONG",
+      score: Math.round(y * 100)
+    };
+  }
 
-  const ids = rows.map(
-    x => String(x.market_id)
+  if (y >= 0.65) {
+    return {
+      side: "YES",
+      strength: "STRONG",
+      score: Math.round(y * 100)
+    };
+  }
+
+  if (y <= 0.20) {
+    return {
+      side: "NO",
+      strength: "VERY_STRONG",
+      score: Math.round(n * 100)
+    };
+  }
+
+  if (y <= 0.35) {
+    return {
+      side: "NO",
+      strength: "STRONG",
+      score: Math.round(n * 100)
+    };
+  }
+
+  return {
+    side: "NEUTRAL",
+    strength: "NEUTRAL",
+    score: 50
+  };
+}
+
+function calculateEdge(yes, aiYes) {
+  const market = probability(yes);
+  const ai = probability(aiYes);
+
+  const edge = ai - market;
+
+  return {
+    marketProbability: pct(market),
+    aiProbability: pct(ai),
+    edge: Number(edge.toFixed(4)),
+    edgePct: Number((edge * 100).toFixed(2))
+  };
+}
+
+async function getMarkets(params = {}) {
+  const limit = Math.min(
+    Math.max(num(params.limit, 100), 1),
+    100
   );
 
-  if (!ids.length) {
-    return 0;
+  const offset = Math.max(
+    num(params.offset, 0),
+    0
+  );
+
+  const url = new URL(`${GAMMA}/markets`);
+
+  url.searchParams.set(
+    "active",
+    params.active === "false" ? "false" : "true"
+  );
+
+  url.searchParams.set(
+    "closed",
+    params.closed === "true" ? "true" : "false"
+  );
+
+  url.searchParams.set("limit", String(limit));
+  url.searchParams.set("offset", String(offset));
+
+  if (params.order) {
+    url.searchParams.set("order", params.order);
   }
 
-  const closed = await getClosed(ids);
-
-  let resolved = 0;
-
-  for (const c of closed) {
-    const result = await sqlExec(`
-      UPDATE predictions
-      SET
-        outcome = $1,
-        resolved_at = NOW()
-      WHERE
-        market_id = $2
-        AND outcome IS NULL
-    `, [
-      c.outcome,
-      c.id
-    ]);
-
-    resolved += result.length || 0;
+  if (params.ascending !== undefined) {
+    url.searchParams.set(
+      "ascending",
+      String(params.ascending)
+    );
   }
 
-  return resolved;
+  if (params.q) {
+    url.searchParams.set("q", params.q);
+  }
+
+  if (params.tag_id) {
+    url.searchParams.set("tag_id", params.tag_id);
+  }
+
+  if (params.tag_slug) {
+    url.searchParams.set("tag_slug", params.tag_slug);
+  }
+
+  return fetchJson(url.toString());
 }
 
-/* -------------------------------------------------------
-   INSERT PREDICTION
-------------------------------------------------------- */
-
-async function savePrediction(x) {
-  /*
-   IMPORTANT:
-   One prediction per market per hour.
-
-   This prevents the database from exploding
-   when the API is called every few seconds.
-  */
-
-  await sqlExec(`
-    INSERT INTO predictions (
-      market_id,
-      question,
-      predicted_at,
-      model_p,
-      market_p,
-      confidence,
-      edge
-    )
-    SELECT
-      $1,
-      $2,
-      date_trunc('hour', NOW()),
-      $3,
-      $4,
-      $5,
-      $6
-    WHERE NOT EXISTS (
-      SELECT 1
-      FROM predictions
-      WHERE
-        market_id = $1
-        AND predicted_at =
-            date_trunc('hour', NOW())
-    )
-  `, [
-    String(x.id),
-    x.question,
-    x.modelYes,
-    x.marketYes,
-    x.confidence,
-    x.edge
-  ]);
-}
-
-/* -------------------------------------------------------
-   MAIN HANDLER
-------------------------------------------------------- */
-
-async function handler(req, res) {
+export default async function handler(req, res) {
   try {
-    if (!process.env.DATABASE_URL) {
-      return res.status(500).json({
+    if (req.method !== "GET") {
+      return res.status(405).json({
         ok: false,
-        error:
-          'DATABASE_URL is missing in Vercel Environment Variables'
+        error: "Method not allowed"
       });
     }
 
+    const {
+      limit = "100",
+      offset = "0",
+      active = "true",
+      closed = "false",
+      order = "volume",
+      ascending = "false",
+      q = "",
+      tag_id = "",
+      tag_slug = "",
+      details = "true",
+      history = "false",
+      book = "false"
+    } = req.query || {};
+
+    const markets = await getMarkets({
+      limit,
+      offset,
+      active,
+      closed,
+      order,
+      ascending,
+      q,
+      tag_id,
+      tag_slug
+    });
+
+    const normalized = Array.isArray(markets)
+      ? markets.map(normalizeMarket)
+      : [];
+
+    let result = normalized;
+
     /*
-     * 1. Prepare DB
+     * Optional CLOB orderbook.
+     * Use ?book=true
      */
+    if (book === "true") {
+      result = await Promise.all(
+        result.map(async market => {
+          const yesBook = await getOrderBook(
+            market.yes.tokenId
+          );
 
-    await ensure();
+          const noBook = await getOrderBook(
+            market.no.tokenId
+          );
 
-    /*
-     * 2. Resolve old predictions first
-     */
-
-    await resolveTrackedPredictions();
-
-    /*
-     * 3. Load calibration data
-     */
-
-    let db = await loadDB();
-
-    const cal =
-      calibration(db.resolved);
-
-    /*
-     * 4. Fetch active markets
-     */
-
-    const u =
-      new URL(`${GAMMA}/markets`);
-
-    u.searchParams.set(
-      'active',
-      'true'
-    );
-
-    u.searchParams.set(
-      'closed',
-      'false'
-    );
-
-    u.searchParams.set(
-      'limit',
-      '100'
-    );
-
-    u.searchParams.set(
-      'order',
-      'volume'
-    );
-
-    u.searchParams.set(
-      'ascending',
-      'false'
-    );
-
-    const r = await fetch(u);
-
-    if (!r.ok) {
-      throw new Error(
-        `Gamma HTTP ${r.status}`
+          return {
+            ...market,
+            orderBook: {
+              yes: yesBook,
+              no: noBook
+            }
+          };
+        })
       );
     }
 
-    let ms = await r.json();
+    /*
+     * Optional price history.
+     * Use ?history=true
+     */
+    if (history === "true") {
+      result = await Promise.all(
+        result.map(async market => {
+          const yesHistory =
+            await getPriceHistory(
+              market.yes.tokenId
+            );
 
-    if (!Array.isArray(ms)) {
-      ms = ms.markets || [];
-    }
-
-    ms = ms
-      .filter(binary)
-      .slice(
-        0,
-        Math.min(
-          300,
-          Number(req.query?.limit || 300)
-        )
+          return {
+            ...market,
+            history: {
+              yes: yesHistory
+            }
+          };
+        })
       );
-
-    /*
-     * 5. Analyse markets
-     */
-
-    const out = [];
-
-    /*
-     * Limit expensive history calls.
-     */
-
-    for (
-      const m of ms.slice(0, 80)
-    ) {
-      const history =
-        await hist(token(m));
-
-      const model =
-        baseModel(
-          m,
-          history,
-          cal
-        );
-
-      out.push({
-        ...model,
-
-        id: m.id,
-        question: m.question,
-        endDate: m.endDate
-      });
     }
 
     /*
-     * 6. Save predictions
+     * Market ranking.
      */
+    result.sort((a, b) => {
+      if (order === "liquidity") {
+        return b.liquidity - a.liquidity;
+      }
 
-    for (const x of out) {
-      await savePrediction(x);
-    }
+      if (
+        order === "volume_24hr" ||
+        order === "volume24h"
+      ) {
+        return b.volume24h - a.volume24h;
+      }
+
+      return b.volume - a.volume;
+    });
+
+    const top = result.slice(0, 10);
 
     /*
-     * 7. Resolve newly tracked markets too
+     * Basic dashboard statistics.
      */
+    const stats = {
+      total: result.length,
 
-    const currentIds =
-      out.map(x => String(x.id));
+      active: result.filter(
+        m => m.active && !m.closed
+      ).length,
 
-    const closed =
-      await getClosed(currentIds);
+      closed: result.filter(
+        m => m.closed
+      ).length,
 
-    for (const c of closed) {
-      await sqlExec(`
-        UPDATE predictions
-        SET
-          outcome = $1,
-          resolved_at = NOW()
-        WHERE
-          market_id = $2
-          AND outcome IS NULL
-      `, [
-        c.outcome,
-        c.id
-      ]);
-    }
+      totalVolume: result.reduce(
+        (sum, m) => sum + m.volume,
+        0
+      ),
+
+      totalLiquidity: result.reduce(
+        (sum, m) => sum + m.liquidity,
+        0
+      ),
+
+      avgYesProbability:
+        result.length > 0
+          ? Number(
+              (
+                result.reduce(
+                  (sum, m) => sum + m.yes.price,
+                  0
+                ) /
+                result.length *
+                100
+              ).toFixed(2)
+            )
+          : 0
+    };
 
     /*
-     * 8. Reload DB after updates
+     * Top markets.
      */
+    const topMarkets = top.map(m => ({
+      id: m.id,
+      question: m.question,
+      slug: m.slug,
 
-    db = await loadDB();
+      yes: m.yes,
+      no: m.no,
 
-    /*
-     * 9. Metrics
-     */
+      volume: m.volume,
+      volume24h: m.volume24h,
+      liquidity: m.liquidity,
 
-    const resolvedRecords =
-      db.resolved.map(x => ({
-        p:
-          x.model_p ??
-          x.p,
+      signal: calculateSignal(
+        m.yes.price,
+        m.no.price
+      ),
 
-        m:
-          x.market_p ??
-          x.m,
-
-        y: x.outcome,
-
-        conf:
-          x.confidence ??
-          50,
-
-        edge:
-          x.edge ??
-          0
-      }));
-
-    /*
-     * 10. Response
-     */
+      endDate: m.endDate,
+      active: m.active,
+      closed: m.closed
+    }));
 
     return res.status(200).json({
       ok: true,
 
-      storage: 'database',
-
-      activeMarkets:
-        ms.length,
-
-      analysed:
-        out.length,
-
-      markets:
-        out,
-
-      metrics: {
-        tracked:
-          db.tracked,
-
-        resolvedRecords
+      source: {
+        gamma: GAMMA,
+        clob: CLOB
       },
 
-      updatedAt:
-        Date.now()
+      timestamp: Date.now(),
+
+      count: result.length,
+
+      stats,
+
+      topMarkets,
+
+      markets:
+        details === "false"
+          ? result.map(m => ({
+              id: m.id,
+              question: m.question,
+              slug: m.slug,
+              yes: m.yes,
+              no: m.no,
+              volume: m.volume,
+              volume24h: m.volume24h,
+              liquidity: m.liquidity,
+              active: m.active,
+              closed: m.closed,
+              endDate: m.endDate
+            }))
+          : result
     });
 
-  } catch (e) {
-    console.error(
-      'Polymarket API error:',
-      e
-    );
+  } catch (error) {
+    console.error("MARKET API ERROR:", error);
 
     return res.status(500).json({
       ok: false,
-      error:
-        e?.message ||
-        'Unknown server error'
+      error: "Market API failed",
+      message: error?.message || "Unknown error",
+      timestamp: Date.now()
     });
   }
 }
-
-export default handler;
