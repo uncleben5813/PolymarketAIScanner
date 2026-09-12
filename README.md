@@ -1,12 +1,7 @@
-# Polymarket AI Prediction Machine V3
+# Polymarket AI Prediction Machine V4
 
-V3 improves the scanner and introduces a metrics layer. It deliberately does NOT fake a historical win rate or Brier score when no resolved prediction database exists.
+V4 adds a prediction ledger in browser localStorage. Each market gets a model snapshot at most once per hour. The dashboard counts tracked and resolved observations and calculates Brier Score when outcomes are manually recorded in the ledger.
 
-Current model:
-- Market YES probability is the prior.
-- CLOB history supplies a small momentum signal.
-- Uncertainty shrinks edge.
-- Liquidity/volume affect confidence.
-- Brier and Log Loss are shown as Pending until resolved predictions are persisted.
+Important limitation: Vercel serverless functions are stateless. This V4 deliberately keeps the first ledger in the browser so it works without a database. For a real multi-device/persistent learning system, connect a durable store (for example Vercel KV/Postgres) and add automatic resolution polling.
 
-Next serious backend upgrade: add persistent storage for prediction snapshots, resolve outcomes, and calculate Brier/Log Loss over time.
+Do not treat confidence or edge as guaranteed profit.
