@@ -1,736 +1,807 @@
-<!doctype html>
-
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Polymarket AI Prediction Machine V6</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Polymarket AI Prediction Machine</title>
+
 <style>
 *{box-sizing:border-box}
 body{
   margin:0;
-  background:#080d18;
-  color:#edf2ff;
-  font:14px system-ui,-apple-system,sans-serif
+  font-family:Inter,Arial,sans-serif;
+  background:#07111f;
+  color:#e8eef7;
 }
-.wrap{
-  max-width:1220px;
+.container{
+  max-width:1400px;
   margin:auto;
-  padding:18px
+  padding:20px;
 }
-.top{
+header{
   display:flex;
   justify-content:space-between;
-  gap:12px;
-  flex-wrap:wrap;
-  align-items:center
+  align-items:center;
+  gap:15px;
+  margin-bottom:20px;
 }
 h1{
-  font-size:22px;
-  margin:0 0 3px
+  margin:0;
+  font-size:25px;
 }
-.muted,small{
-  color:#8e9ab4
+.sub{
+  color:#8ea1b8;
+  font-size:13px;
+  margin-top:5px;
 }
-button,input,select{
-  background:#111a2d;
-  color:#edf2ff;
-  border:1px solid #293752;
+.status{
+  padding:8px 12px;
+  border:1px solid #29415e;
   border-radius:10px;
-  padding:10px
+  font-size:12px;
+  background:#0b192b;
 }
-button{
-  cursor:pointer
+.status.ok{color:#55e39b}
+.status.err{color:#ff7373}
+
+.stats{
+  display:grid;
+  grid-template-columns:repeat(6,1fr);
+  gap:12px;
+  margin-bottom:20px;
 }
-.bar{
+.stat{
+  background:#0c1a2b;
+  border:1px solid #1c314a;
+  border-radius:14px;
+  padding:15px;
+}
+.stat .label{
+  color:#8195ad;
+  font-size:12px;
+}
+.stat .value{
+  font-size:21px;
+  font-weight:700;
+  margin-top:6px;
+}
+
+.toolbar{
   display:flex;
-  gap:8px;
+  gap:10px;
   flex-wrap:wrap;
-  margin:15px 0
+  margin-bottom:18px;
+}
+input,select,button{
+  background:#0c1a2b;
+  color:#e8eef7;
+  border:1px solid #29415e;
+  border-radius:10px;
+  padding:11px 13px;
 }
 input{
   flex:1;
-  min-width:210px
+  min-width:220px;
 }
-.stats{
-  display:grid;
-  grid-template-columns:repeat(8,1fr);
-  gap:8px
+button{
+  cursor:pointer;
 }
-.stat,.card,.panel{
-  background:#0f1728;
-  border:1px solid #202d47;
-  border-radius:14px
+button:hover{
+  background:#12263d;
 }
-.stat{
-  padding:10px
+
+.message{
+  padding:25px;
+  text-align:center;
+  border:1px dashed #29415e;
+  border-radius:14px;
+  color:#91a4bb;
+  margin-top:20px;
 }
-.stat b{
-  display:block;
-  font-size:18px;
-  margin-top:4px
-}
+
 .grid{
   display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
-  gap:10px;
-  margin-top:12px
+  grid-template-columns:repeat(3,1fr);
+  gap:15px;
 }
+
 .card{
-  padding:14px
+  background:#0c1a2b;
+  border:1px solid #1c314a;
+  border-radius:16px;
+  padding:17px;
+  min-width:0;
 }
-.q{
-  font-weight:700;
-  line-height:1.35;
-  margin:8px 0
+.card:hover{
+  border-color:#3a5d83;
 }
-.row{
+
+.card-top{
   display:flex;
   justify-content:space-between;
-  gap:8px;
-  margin:7px 0
+  gap:10px;
+  align-items:flex-start;
 }
-.edge{
-  font-size:20px;
-  font-weight:800
+
+.rank{
+  color:#6f86a0;
+  font-size:12px;
 }
-.pos{
-  color:#55dda0
+
+.question{
+  font-size:16px;
+  font-weight:700;
+  line-height:1.35;
+  margin:10px 0 14px;
 }
-.neg{
-  color:#ff7c91
+
+.badge{
+  display:inline-block;
+  padding:5px 8px;
+  border-radius:7px;
+  font-size:11px;
+  font-weight:700;
+}
+.yes{
+  background:#123b2c;
+  color:#5ff0a6;
+}
+.no{
+  background:#412024;
+  color:#ff858d;
 }
 .neutral{
-  color:#ffd166
+  background:#263548;
+  color:#b9c6d6;
 }
-.tag{
-  display:inline-block;
-  padding:3px 7px;
-  border-radius:99px;
-  background:#19243c;
-  font-size:11px
-}
-.meter{
-  height:6px;
-  background:#202b43;
-  border-radius:8px;
-  overflow:hidden
-}
-.meter i{
-  display:block;
-  height:100%;
-  background:#7d89ff
-}
-.signal{
-  padding:8px 10px;
-  border-radius:10px;
-  background:#151f35;
-  margin:10px 0;
-  font-weight:800;
-  text-align:center
-}
-.two{
+
+.prices{
   display:grid;
   grid-template-columns:1fr 1fr;
-  gap:10px
+  gap:10px;
+  margin-bottom:13px;
 }
-.panel{
-  padding:13px;
-  margin-top:12px
-}
-.footer{
-  margin-top:16px;
-  font-size:12px;
-  color:#74819b
-}
-.error{
-  color:#ff7c91;
-  background:#241521;
-  border:1px solid #5a2737;
-  padding:12px;
+
+.pricebox{
+  background:#081522;
   border-radius:10px;
-  margin-top:10px
+  padding:12px;
 }
-.good{
-  color:#55dda0
+.pricebox .label{
+  color:#7d91aa;
+  font-size:11px;
 }
-@media(max-width:850px){
-  .stats{
-    grid-template-columns:repeat(4,1fr)
-  }
+.pricebox .price{
+  font-size:22px;
+  font-weight:800;
+  margin-top:4px;
 }
-@media(max-width:600px){
-  .stats{
-    grid-template-columns:repeat(2,1fr)
-  }
-  .two{
-    grid-template-columns:1fr
-  }
+
+.meta{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:8px;
+  margin-top:10px;
+}
+
+.meta-box{
+  background:#081522;
+  border-radius:9px;
+  padding:9px;
+}
+.meta-label{
+  color:#71869e;
+  font-size:10px;
+}
+.meta-value{
+  font-size:12px;
+  font-weight:700;
+  margin-top:3px;
+}
+
+.ai{
+  margin-top:13px;
+  padding:12px;
+  background:#101f31;
+  border-radius:10px;
+  border:1px solid #203750;
+}
+.ai-title{
+  color:#8da4bd;
+  font-size:11px;
+}
+.ai-value{
+  margin-top:4px;
+  font-size:19px;
+  font-weight:800;
+}
+
+.footer{
+  color:#60758e;
+  text-align:center;
+  font-size:11px;
+  margin:30px 0 10px;
+}
+
+@media(max-width:1100px){
+  .stats{grid-template-columns:repeat(3,1fr)}
+  .grid{grid-template-columns:repeat(2,1fr)}
+}
+
+@media(max-width:650px){
+  .container{padding:12px}
+  header{align-items:flex-start}
+  h1{font-size:20px}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .grid{grid-template-columns:1fr}
+  .meta{grid-template-columns:repeat(2,1fr)}
 }
 </style>
 </head>
+
 <body>
-<div class="wrap">
-<div class="top">
+
+<div class="container">
+
+<header>
   <div>
-    <h1>🧠 Polymarket AI Prediction Machine V6</h1>
-<div class="muted">
-  Live Polymarket markets · AI probability · edge detection
-</div>
+    <h1>Polymarket AI Prediction Machine</h1>
+    <div class="sub">Live market scanner • AI probability • edge detection</div>
+  </div>
+  <div id="status" class="status">Connecting...</div>
+</header>
+
+<section class="stats">
+  <div class="stat">
+    <div class="label">Markets</div>
+    <div class="value" id="statMarkets">—</div>
   </div>
 
-↻ Refresh
+  <div class="stat">
+    <div class="label">Active</div>
+    <div class="value" id="statActive">—</div>
+  </div>
 
-</div>
-<div class="bar">
+  <div class="stat">
+    <div class="label">Volume</div>
+    <div class="value" id="statVolume">—</div>
+  </div>
 
-<input
-id=“q”
-placeholder=“Search market…”
+  <div class="stat">
+    <div class="label">Liquidity</div>
+    <div class="value" id="statLiquidity">—</div>
+  </div>
 
-  <select id="s">
-    <option value="edge">Best AI Edge</option>
-    <option value="confidence">Confidence</option>
+  <div class="stat">
+    <div class="label">Avg YES</div>
+    <div class="value" id="statAvgYes">—</div>
+  </div>
+
+  <div class="stat">
+    <div class="label">Updated</div>
+    <div class="value" id="statUpdated">—</div>
+  </div>
+</section>
+
+<div class="toolbar">
+  <input
+    id="search"
+    type="search"
+    placeholder="Search markets..."
+  >
+
+  <select id="signalFilter">
+    <option value="all">All signals</option>
+    <option value="YES">YES</option>
+    <option value="NO">NO</option>
+    <option value="NEUTRAL">Neutral</option>
+  </select>
+
+  <select id="sort">
     <option value="volume">Volume</option>
     <option value="liquidity">Liquidity</option>
+    <option value="yes">YES probability</option>
+    <option value="edge">AI edge</option>
   </select>
-  <select id="c">
-    <option value="0">All confidence</option>
-    <option value="60">60%+</option>
-    <option value="70">70%+</option>
-    <option value="80">80%+</option>
-  </select>
+
+  <button id="refresh">Refresh</button>
 </div>
-<div class="stats">
-  <div class="stat">
-    Active
-    <b id="a">—</b>
-  </div>
-  <div class="stat">
-    Analysed
-    <b id="n">—</b>
-  </div>
-  <div class="stat">
-    Strong YES
-    <b id="yes">—</b>
-  </div>
-  <div class="stat">
-    Strong NO
-    <b id="no">—</b>
-  </div>
-  <div class="stat">
-    Avg AI
-    <b id="ai">—</b>
-  </div>
-  <div class="stat">
-    Avg Market
-    <b id="market">—</b>
-  </div>
-  <div class="stat">
-    Volume
-    <b id="vol">—</b>
-  </div>
-  <div class="stat">
-    API
-    <b id="db">—</b>
-  </div>
+
+<div id="message" class="message">
+  Loading live Polymarket markets...
 </div>
-<div
-  id="status"
-  class="muted"
-  style="margin:14px 0"
->
-Loading markets...
-</div>
-<div class="two">
-  <div class="panel">
-<b>🤖 AI Market Summary</b>
-<div
-  id="summary"
-  class="muted"
-  style="margin-top:8px"
->
-  Waiting for market data.
-</div>
-  </div>
-  <div class="panel">
-<b>📊 Signal Engine</b>
-<div
-  id="signal"
-  class="muted"
-  style="margin-top:8px"
->
-  Waiting for market data.
-</div>
-  </div>
-</div>
+
 <div id="grid" class="grid"></div>
+
 <div class="footer">
-  Live market data from Polymarket. AI probability and edge are
-  analytical estimates only and do not guarantee profit or outcomes.
+  Data source: Polymarket Gamma API + CLOB
 </div>
+
 </div>
+
 <script>
-let D = [];
-const $ = x => document.getElementById(x);
-function num(x, fallback=0){
-  const n = Number(x);
+"use strict";
+
+const API = "/api/markets";
+
+let markets = [];
+let stats = {};
+let loading = false;
+
+const $ = id => document.getElementById(id);
+
+function number(v, fallback = 0){
+  const n = Number(v);
   return Number.isFinite(n) ? n : fallback;
 }
-function probability(x){
-  let n = num(x);
-  /*
-   * API may return either:
-   * 0.65
-   * or 65
-   */
-  if(n > 1) n = n / 100;
-  return Math.max(0,Math.min(1,n));
+
+function money(v){
+  const n = number(v);
+
+  if(n >= 1000000000)
+    return "$" + (n / 1000000000).toFixed(2) + "B";
+
+  if(n >= 1000000)
+    return "$" + (n / 1000000).toFixed(2) + "M";
+
+  if(n >= 1000)
+    return "$" + (n / 1000).toFixed(1) + "K";
+
+  return "$" + n.toFixed(0);
 }
-function pct(x){
-  return (probability(x)*100).toFixed(1)+'%';
+
+function percent(v){
+  let n = number(v);
+
+  if(n <= 1) n *= 100;
+
+  return n.toFixed(2) + "%";
 }
-function money(x){
-  x = num(x);
-  if(x >= 1000000)
-    return '$'+(x/1000000).toFixed(1)+'M';
-  if(x >= 1000)
-    return '$'+(x/1000).toFixed(1)+'K';
-  return '$'+x.toFixed(0);
-}
-function getMarketYes(x){
-  return probability(
-    x.marketYes ??
-    x.yes?.price ??
-    x.yesProbability ??
-    x.outcomePrices?.[0] ??
-    0
-  );
-}
-function getMarketNo(x){
-  return probability(
-    x.marketNo ??
-    x.no?.price ??
-    x.noProbability ??
-    x.outcomePrices?.[1] ??
-    (1-getMarketYes(x))
-  );
-}
-function getAIYes(x){
-  return probability(
-    x.aiYes ??
-    x.modelYes ??
-    x.aiProbability ??
-    x.prediction ??
-    x.ai?.yes ??
-    getMarketYes(x)
-  );
-}
-function getVolume(x){
-  return num(
-    x.volume ??
-    x.volume24h ??
-    x.volume24hr ??
-    0
-  );
-}
-function getLiquidity(x){
-  return num(
-    x.liquidity ??
-    0
-  );
-}
-function getEdge(x){
-  /*
-   * AI edge:
-   *
-   * AI probability - market probability
-   */
-  if(x.edge !== undefined)
-    return num(x.edge);
-  return getAIYes(x)-getMarketYes(x);
-}
-function getConfidence(x){
-  if(x.confidence !== undefined)
-    return num(x.confidence);
-  const edge = Math.abs(getEdge(x));
-  /*
-   * Convert edge into a simple confidence score.
-   */
-  return Math.round(
-    Math.min(
-      99,
-      50 + edge*200
-    )
-  );
-}
-function getSignal(x){
-  const ai = getAIYes(x);
-  const market = getMarketYes(x);
-  const edge = getEdge(x);
-  if(
-    ai >= 0.65 &&
-    edge >= 0.05
-  ){
-    return {
-      side:'YES',
-      strength:'STRONG',
-      className:'pos'
-    };
-  }
-  if(
-    ai <= 0.35 &&
-    edge <= -0.05
-  ){
-    return {
-      side:'NO',
-      strength:'STRONG',
-      className:'neg'
-    };
-  }
-  return {
-    side:'NEUTRAL',
-    strength:'WAIT',
-    className:'neutral'
-  };
-}
-function normalize(x){
-  const marketYes = getMarketYes(x);
-  const marketNo = getMarketNo(x);
-  const aiYes = getAIYes(x);
-  const edge = getEdge(x);
-  const confidence = getConfidence(x);
-  const signal = getSignal(x);
-  return {
-    ...x,
-    question:
-      x.question ??
-      'Unknown market',
-    marketYes,
-    marketNo,
-    aiYes,
-    edge,
-    confidence,
-    volume:
-      getVolume(x),
-    liquidity:
-      getLiquidity(x),
-    signal
-  };
-}
-function render(){
-  const q =
-    $('q').value
-      .toLowerCase()
-      .trim();
-  const minConfidence =
-    num($('c').value);
-  const sort =
-    $('s').value;
-  let data =
-    D
-      .map(normalize)
-      .filter(x => {
-        const question =
-          String(x.question)
-            .toLowerCase();
-        return (
-          question.includes(q) &&
-          x.confidence >= minConfidence
-        );
-      });
-  data.sort((x,y)=>{
-    if(sort === 'confidence')
-      return y.confidence-x.confidence;
-    if(sort === 'volume')
-      return y.volume-x.volume;
-    if(sort === 'liquidity')
-      return y.liquidity-x.liquidity;
-    return Math.abs(y.edge)-Math.abs(x.edge);
-  });
-  $('grid').innerHTML =
-    data.map(x => {
-      const signal = x.signal;
-      const edgePct =
-        x.edge*100;
-      const edgeText =
-        (edgePct >= 0 ? '+' : '') +
-        edgePct.toFixed(2) +
-        '%';
-      const aiPercent =
-        x.aiYes*100;
-      return `
-      <div class="card">
-        <span class="tag">
-          ${x.category || 'MARKET'}
-        </span>
-        <div class="q">
-          ${escapeHtml(x.question)}
-        </div>
-        <div class="signal ${signal.className}">
-          ${signal.side} · ${signal.strength}
-        </div>
-        <div class="row">
-          <span>Market YES</span>
-          <b>${pct(x.marketYes)}</b>
-        </div>
-        <div class="row">
-          <span>Market NO</span>
-          <b>${pct(x.marketNo)}</b>
-        </div>
-        <div class="row">
-          <span>AI YES</span>
-          <b>${pct(x.aiYes)}</b>
-        </div>
-        <div class="row">
-          <span>AI Edge</span>
-          <b class="edge ${
-            edgePct >= 0
-              ? 'pos'
-              : 'neg'
-          }">
-            ${edgeText}
-          </b>
-        </div>
-        <div class="row">
-          <span>Confidence</span>
-          <b>
-            ${x.confidence}%
-          </b>
-        </div>
-        <div class="meter">
-          <i
-            style="width:${Math.min(
-              100,
-              Math.max(
-                0,
-                x.confidence
-              )
-            )}%"
-          ></i>
-        </div>
-        <div class="row">
-          <small>
-            AI probability ${aiPercent.toFixed(1)}%
-          </small>
-        </div>
-        <div class="row">
-          <small>
-            Liquidity ${money(x.liquidity)}
-            · Volume ${money(x.volume)}
-          </small>
-        </div>
-        <div class="row">
-          <small>
-            ID: ${x.id ?? '—'}
-          </small>
-        </div>
-      </div>
-      `;
-    }).join('');
-  if(!data.length){
-    $('grid').innerHTML = `
-      <div class="panel">
-        No matching markets found.
-      </div>
-    `;
-  }
-}
-function updateStats(){
-  const data =
-    D.map(normalize);
-  $('n').textContent =
-    data.length;
-  $('a').textContent =
-    data.filter(x =>
-      x.active !== false &&
-      x.closed !== true
-    ).length;
-  $('yes').textContent =
-    data.filter(x =>
-      x.signal.side === 'YES'
-    ).length;
-  $('no').textContent =
-    data.filter(x =>
-      x.signal.side === 'NO'
-    ).length;
-  const avgAI =
-    data.length
-      ? data.reduce(
-          (s,x)=>s+x.aiYes,
-          0
-        ) / data.length
-      : 0;
-  const avgMarket =
-    data.length
-      ? data.reduce(
-          (s,x)=>s+x.marketYes,
-          0
-        ) / data.length
-      : 0;
-  const totalVolume =
-    data.reduce(
-      (s,x)=>s+x.volume,
-      0
-    );
-  $('ai').textContent =
-    pct(avgAI);
-  $('market').textContent =
-    pct(avgMarket);
-  $('vol').textContent =
-    money(totalVolume);
-}
-function updateSummary(){
-  const data =
-    D.map(normalize);
-  if(!data.length){
-    $('summary').textContent =
-      'No market data.';
-    $('signal').textContent =
-      'No signal available.';
-    return;
-  }
-  const yes =
-    data.filter(
-      x=>x.signal.side==='YES'
-    ).length;
-  const no =
-    data.filter(
-      x=>x.signal.side==='NO'
-    ).length;
-  const neutral =
-    data.length-yes-no;
-  const strongest =
-    [...data]
-      .sort(
-        (a,b)=>
-          Math.abs(b.edge)-
-          Math.abs(a.edge)
-      )[0];
-  $('summary').innerHTML = `
-    ${data.length} markets analysed.
-    <br>
-    <span class="good">
-      ${yes} YES
-    </span>
-    ·
-    <span class="neg">
-      ${no} NO
-    </span>
-    ·
-    ${neutral} WAIT
-    <br>
-    Strongest current edge:
-    <b>
-      ${strongest.question}
-    </b>
-    (${(strongest.edge*100).toFixed(2)}%)
-  `;
-  $('signal').innerHTML = `
-    Best signal:
-    <b class="${strongest.signal.className}">
-      ${strongest.signal.side}
-    </b>
-    · AI YES
-    <b>
-      ${pct(strongest.aiYes)}
-    </b>
-    · Market YES
-    <b>
-      ${pct(strongest.marketYes)}
-    </b>
-    · Edge
-    <b>
-      ${(strongest.edge*100).toFixed(2)}%
-    </b>
-  `;
-}
+
 function escapeHtml(value){
-  return String(value ?? '')
-    .replace(/&/g,'&amp;')
-    .replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;')
-    .replace(/"/g,'&quot;')
-    .replace(/'/g,'&#039;');
+  return String(value ?? "")
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;")
+    .replace(/'/g,"&#039;");
 }
+
+function getYes(m){
+  return number(
+    m?.yes?.price ??
+    m?.yes?.probability ??
+    m?.marketYes ??
+    m?.outcomePrices?.[0]
+  );
+}
+
+function getNo(m){
+  return number(
+    m?.no?.price ??
+    m?.no?.probability ??
+    m?.marketNo ??
+    m?.outcomePrices?.[1]
+  );
+}
+
+function getAI(m){
+  if(m?.aiYes !== undefined)
+    return number(m.aiYes);
+
+  if(m?.modelYes !== undefined)
+    return number(m.modelYes);
+
+  if(m?.ai?.yes !== undefined)
+    return number(m.ai.yes);
+
+  if(m?.prediction?.yes !== undefined)
+    return number(m.prediction.yes);
+
+  return null;
+}
+
+function getEdge(m){
+  if(m?.edge !== undefined)
+    return number(m.edge);
+
+  if(m?.edgePct !== undefined)
+    return number(m.edgePct) / 100;
+
+  const ai = getAI(m);
+  const yes = getYes(m);
+
+  if(ai !== null)
+    return ai - yes;
+
+  return null;
+}
+
+function getSignal(m){
+  if(m?.signal?.side)
+    return String(m.signal.side).toUpperCase();
+
+  const yes = getYes(m);
+
+  if(yes >= 0.80) return "YES";
+  if(yes >= 0.65) return "YES";
+  if(yes <= 0.20) return "NO";
+  if(yes <= 0.35) return "NO";
+
+  return "NEUTRAL";
+}
+
+function signalClass(signal){
+  if(signal === "YES") return "yes";
+  if(signal === "NO") return "no";
+  return "neutral";
+}
+
+function signalText(m){
+  if(m?.signal?.strength)
+    return m.signal.strength;
+
+  return getSignal(m);
+}
+
+function normalizeMarket(m){
+  return {
+    ...m,
+
+    question:
+      m?.question ||
+      "Unknown market",
+
+    yes:
+      getYes(m),
+
+    no:
+      getNo(m),
+
+    ai:
+      getAI(m),
+
+    edge:
+      getEdge(m),
+
+    volume:
+      number(m?.volume),
+
+    volume24h:
+      number(m?.volume24h),
+
+    liquidity:
+      number(m?.liquidity),
+
+    signal:
+      getSignal(m)
+  };
+}
+
+function setStatus(text, type = ""){
+  const el = $("status");
+
+  el.textContent = text;
+  el.className = "status " + type;
+}
+
+function updateStats(){
+  const s = stats || {};
+
+  $("statMarkets").textContent =
+    number(s.total || markets.length).toLocaleString();
+
+  $("statActive").textContent =
+    number(s.active).toLocaleString();
+
+  $("statVolume").textContent =
+    money(s.totalVolume);
+
+  $("statLiquidity").textContent =
+    money(s.totalLiquidity);
+
+  $("statAvgYes").textContent =
+    percent(s.avgYesProbability);
+
+  $("statUpdated").textContent =
+    new Date().toLocaleTimeString();
+}
+
+function render(){
+  const search =
+    $("search").value.trim().toLowerCase();
+
+  const filter =
+    $("signalFilter").value;
+
+  const sort =
+    $("sort").value;
+
+  let data = markets
+    .map(normalizeMarket)
+    .filter(m => {
+
+      const matchesSearch =
+        !search ||
+        m.question.toLowerCase().includes(search) ||
+        String(m.category || "")
+          .toLowerCase()
+          .includes(search);
+
+      const matchesSignal =
+        filter === "all" ||
+        m.signal === filter;
+
+      return matchesSearch && matchesSignal;
+    });
+
+  data.sort((a,b) => {
+
+    if(sort === "liquidity")
+      return b.liquidity - a.liquidity;
+
+    if(sort === "yes")
+      return b.yes - a.yes;
+
+    if(sort === "edge")
+      return Math.abs(b.edge ?? 0) -
+             Math.abs(a.edge ?? 0);
+
+    return b.volume - a.volume;
+  });
+
+  $("message").style.display =
+    data.length ? "none" : "block";
+
+  $("message").textContent =
+    data.length
+      ? ""
+      : "No matching markets found.";
+
+  $("grid").innerHTML =
+    data.map((m,index) => {
+
+      const signal = m.signal;
+      const cls = signalClass(signal);
+
+      const aiText =
+        m.ai === null
+          ? "Not available"
+          : percent(m.ai);
+
+      const edgeText =
+        m.edge === null
+          ? "—"
+          : percent(m.edge);
+
+      return `
+        <article class="card">
+
+          <div class="card-top">
+            <div class="rank">#${index + 1}</div>
+
+            <span class="badge ${cls}">
+              ${escapeHtml(signal)}
+            </span>
+          </div>
+
+          <div class="question">
+            ${escapeHtml(m.question)}
+          </div>
+
+          <div class="prices">
+
+            <div class="pricebox">
+              <div class="label">YES probability</div>
+              <div class="price">
+                ${percent(m.yes)}
+              </div>
+            </div>
+
+            <div class="pricebox">
+              <div class="label">NO probability</div>
+              <div class="price">
+                ${percent(m.no)}
+              </div>
+            </div>
+
+          </div>
+
+          <div class="ai">
+            <div class="ai-title">
+              AI Prediction
+            </div>
+
+            <div class="ai-value">
+              ${aiText}
+            </div>
+
+            ${
+              m.ai !== null
+              ? `<div class="sub">
+                   AI Edge: ${edgeText}
+                 </div>`
+              : ""
+            }
+          </div>
+
+          <div class="meta">
+
+            <div class="meta-box">
+              <div class="meta-label">
+                SIGNAL
+              </div>
+              <div class="meta-value">
+                ${escapeHtml(signalText(m))}
+              </div>
+            </div>
+
+            <div class="meta-box">
+              <div class="meta-label">
+                VOLUME
+              </div>
+              <div class="meta-value">
+                ${money(m.volume)}
+              </div>
+            </div>
+
+            <div class="meta-box">
+              <div class="meta-label">
+                LIQUIDITY
+              </div>
+              <div class="meta-value">
+                ${money(m.liquidity)}
+              </div>
+            </div>
+
+          </div>
+
+        </article>
+      `;
+    })
+    .join("");
+}
+
 async function load(){
-  $('status').textContent =
-    'Loading live Polymarket markets...';
-  $('db').textContent =
-    '...';
+  if(loading) return;
+
+  loading = true;
+
+  setStatus("Loading...");
+
   try{
+
     const response =
       await fetch(
-        '/api/markets?limit=300',
+        API + "?limit=100&details=true",
         {
-          cache:'no-store'
+          cache:"no-store",
+          headers:{
+            "Accept":"application/json"
+          }
         }
       );
+
     if(!response.ok){
       throw new Error(
-        'HTTP '+response.status
+        "HTTP " + response.status
       );
     }
+
     const json =
       await response.json();
-    if(!json.ok){
+
+    console.log("POLYMARKET API:", json);
+
+    if(!json || json.ok !== true){
       throw new Error(
-        json.error ||
-        'API returned ok:false'
+        json?.error ||
+        json?.message ||
+        "API returned ok:false"
       );
     }
-    /*
-     * Main market array.
-     */
-    D =
-      Array.isArray(json.markets)
-        ? json.markets
-        : [];
-    $('db').textContent =
-      'Connected';
+
+    if(!Array.isArray(json.markets)){
+      throw new Error(
+        "API response has no markets array"
+      );
+    }
+
+    markets = json.markets;
+
+    stats =
+      json.stats ||
+      {
+        total: markets.length,
+        active: markets.filter(
+          m => m.active && !m.closed
+        ).length,
+        totalVolume: markets.reduce(
+          (sum,m) =>
+            sum + number(m.volume),
+          0
+        ),
+        totalLiquidity: markets.reduce(
+          (sum,m) =>
+            sum + number(m.liquidity),
+          0
+        ),
+        avgYesProbability:
+          markets.length
+            ? markets.reduce(
+                (sum,m) =>
+                  sum + getYes(m),
+                0
+              ) /
+              markets.length *
+              100
+            : 0
+      };
+
     updateStats();
-    updateSummary();
     render();
-    $('status').innerHTML =
-      `<span class="good">
-        ✓ API connected
-      </span>
-      · ${D.length}
-      markets loaded
-      · Auto refresh every 2 minutes`;
+
+    setStatus(
+      markets.length
+        ? "LIVE • " + markets.length + " markets"
+        : "API OK • No markets",
+      markets.length ? "ok" : ""
+    );
+
   }catch(error){
+
     console.error(
-      'MARKETS API ERROR:',
+      "Dashboard API error:",
       error
     );
-    $('db').textContent =
-      'Error';
-    $('status').innerHTML =
-      `<div class="error">
-        API error:
-        ${escapeHtml(error.message)}
-      </div>`;
-    $('grid').innerHTML = `
-      <div class="panel">
-        <b>Unable to load markets</b>
-        <div class="muted" style="margin-top:6px">
-          Check /api/markets directly.
-        </div>
-      </div>
-    `;
+
+    markets = [];
+
+    $("grid").innerHTML = "";
+
+    $("message").style.display = "block";
+
+    $("message").innerHTML =
+      "<strong>API connected but dashboard failed to load.</strong><br><br>" +
+      escapeHtml(error.message);
+
+    setStatus(
+      "API ERROR",
+      "err"
+    );
+
+  }finally{
+    loading = false;
   }
 }
-['q','s','c'].forEach(id => {
-  $(id).addEventListener(
-    'input',
-    render
-  );
-});
+
+$("search").addEventListener(
+  "input",
+  render
+);
+
+$("signalFilter").addEventListener(
+  "change",
+  render
+);
+
+$("sort").addEventListener(
+  "change",
+  render
+);
+
+$("refresh").addEventListener(
+  "click",
+  load
+);
+
 load();
+
 setInterval(
   load,
-  120000
+  60000
 );
 </script>
+
 </body>
 </html>
