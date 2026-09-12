@@ -15,28 +15,34 @@ function num(v, fallback = 0) {
   return Number.isFinite(n) ? n : fallback;
 }
 
-function clamp(x, a, b) {
-  return Math.max(a, Math.min(b, x));
+function clamp(x, min, max) {
+  return Math.max(min, Math.min(max, x));
 }
 
 function probability(v) {
-  const n = num(v, 0);
-  return n > 1 ? clamp(n / 100, 0, 1) : clamp(n, 0, 1);
+  const n = num(v);
+  if (n > 1) return clamp(n / 100, 0, 1);
+  return clamp(n, 0, 1);
 }
 
-function pct(v) {
+function percent(v) {
   return Math.round(probability(v) * 10000) / 100;
+}
+
+function moneyNumber(v) {
+  return Math.max(0, num(v));
 }
 
 async function fetchJson(url, options = {}) {
   const controller = new AbortController();
+
   const timeout = setTimeout(
     () => controller.abort(),
     options.timeout || 9000
   );
 
   try {
-    const res = await fetch(url, {
+    const response = await fetch(url, {
       ...options,
       signal: controller.signal,
       headers: {
@@ -45,20 +51,19 @@ async function fetchJson(url, options = {}) {
       }
     });
 
-    const text = await res.text();
+    const text = await response.text();
 
     let data;
+
     try {
       data = JSON.parse(text);
     } catch {
       data = text;
     }
 
-    if (!res.ok) {
+    if (!response.ok) {
       throw new Error(
-        `${res.status} ${res.statusText}: ${
-          typeof data === "string" ? data.slice(0, 200) : JSON.stringify(data)
-        }`
+        `${response.status} ${response.statusText}`
       );
     }
 
@@ -68,99 +73,152 @@ async function fetchJson(url, options = {}) {
   }
 }
 
-function normalizeNumber(value) {
-  const n = Number(value);
-  return Number.isFinite(n) ? n : 0;
-}
-
-function getOutcomeProbability(outcomes, prices, target) {
+function getOutcomeProbability(outcomes, prices, name) {
   const index = outcomes.findIndex(
-    x => String(x).toLowerCase() === target.toLowerCase()
+    x => String(x).toLowerCase() === name.toLowerCase()
   );
 
-  if (index >= 0 && prices[index] !== undefined) {
-    return probability(prices[index]);
-  }
+  if (index < 0) return 0;
 
-  return 0;
+  return probability(prices[index]);
 }
+
+function logScore(value, divisor) {
+  return clamp(
+    Math.log10(Math.max(value, 1)) / divisor,
+    0,
+    1
+  );
+}
+
+/*
+ * AI ENGINE
+ *
+ * This is a heuristic model based on:
+ * - market probability
+ * - liquidity
+ * - total volume
+ * - recent volume
+ * - probability extremes
+ * - market quality
+ *
+ * It is NOT a trained ML model.
+ */
 
 function calculateAI(market) {
-  const marketYes = probability(market.yes?.probability);
-  const marketNo = probability(market.no?.probability);
+  const marketYes = probability(
+    market.yes?.probability
+  );
 
-  const volume = normalizeNumber(market.volume);
-  const volume24h = normalizeNumber(market.volume24h);
-  const liquidity = normalizeNumber(market.liquidity);
+  const volume = moneyNumber(market.volume);
+  const volume24h = moneyNumber(market.volume24h);
+  const liquidity = moneyNumber(market.liquidity);
+
+  const liquidityScore =
+    logScore(liquidity, 6);
+
+  const volumeScore =
+    logScore(volume, 7);
+
+  const recentVolumeScore =
+    logScore(volume24h, 6);
 
   /*
-   * AI/model layer.
-   *
-   * This is a heuristic scoring engine, NOT a trained ML model.
-   * It combines:
-   * - market probability
-   * - liquidity
-   * - total volume
-   * - recent volume
-   * - market quality
+   * Market quality.
    */
-
-  const liquidityScore = clamp(
-    Math.log10(Math.max(liquidity, 1)) / 6,
+  const marketQuality = clamp(
+    liquidityScore * 45 +
+    volumeScore * 30 +
+    recentVolumeScore * 25,
     0,
-    1
+    100
   );
 
-  const volumeScore = clamp(
-    Math.log10(Math.max(volume, 1)) / 7,
-    0,
-    1
-  );
+  /*
+   * Momentum estimate.
+   *
+   * Higher 24h volume relative to total volume
+   * means more recent activity.
+   */
+  let momentum = 50;
 
-  const recentScore = clamp(
-    Math.log10(Math.max(volume24h, 1)) / 6,
-    0,
-    1
-  );
+  if (volume > 0 && volume24h > 0) {
+    const ratio = volume24h / volume;
 
-  const quality =
-    liquidityScore * 0.45 +
-    volumeScore * 0.30 +
-    recentScore * 0.25;
+    momentum = clamp(
+      50 + ratio * 250,
+      0,
+      100
+    );
+  }
 
   /*
    * Small model adjustment.
-   * The purpose is to avoid simply copying the market price.
+   *
+   * We intentionally keep the adjustment conservative.
    */
-
   let adjustment = 0;
 
-  if (quality > 0.75) adjustment += 0.015;
-  else if (quality > 0.50) adjustment += 0.008;
-  else if (quality < 0.20) adjustment -= 0.008;
+  if (marketQuality >= 75) {
+    adjustment += 0.018;
+  } else if (marketQuality >= 55) {
+    adjustment += 0.010;
+  } else if (marketQuality < 25) {
+    adjustment -= 0.010;
+  }
 
   /*
-   * Extreme probabilities get slightly reduced confidence
-   * because they have less room for model edge.
+   * Strongly extreme markets receive
+   * a small mean-reversion adjustment.
    */
+  if (marketYes >= 0.97) {
+    adjustment -= 0.012;
+  }
 
-  if (marketYes > 0.95) adjustment -= 0.01;
-  if (marketYes < 0.05) adjustment += 0.01;
+  if (marketYes <= 0.03) {
+    adjustment += 0.012;
+  }
 
-  const aiYes = clamp(marketYes + adjustment, 0.01, 0.99);
-  const aiNo = clamp(1 - aiYes, 0.01, 0.99);
+  /*
+   * Recent activity influence.
+   */
+  if (momentum >= 75) {
+    adjustment += 0.006;
+  } else if (momentum <= 25) {
+    adjustment -= 0.004;
+  }
 
-  const edge = aiYes - marketYes;
-  const edgePct = edge * 100;
-
-  const confidence = clamp(
-    0.50 +
-      Math.abs(edge) * 1.8 +
-      quality * 0.28,
-    0,
-    0.98
+  const aiYes = clamp(
+    marketYes + adjustment,
+    0.01,
+    0.99
   );
 
+  const aiNo = clamp(
+    1 - aiYes,
+    0.01,
+    0.99
+  );
+
+  const edge = aiYes - marketYes;
+
+  const edgePct = edge * 100;
+
+  /*
+   * Confidence.
+   */
+  const confidence = clamp(
+    48 +
+    Math.abs(edgePct) * 2.4 +
+    marketQuality * 0.28 +
+    Math.abs(momentum - 50) * 0.10,
+    0,
+    97
+  );
+
+  /*
+   * Signal.
+   */
   let side = "NEUTRAL";
   let strength = "LOW";
 
@@ -178,31 +236,125 @@ function calculateAI(market) {
     strength = "MODERATE";
   }
 
-  const score = clamp(
+  /*
+   * Opportunity score.
+   */
+  const opportunityScore = clamp(
     Math.abs(edgePct) * 8 +
-      confidence * 35 +
-      quality * 25,
+    confidence * 0.35 +
+    marketQuality * 0.25,
     0,
     100
   );
 
+  /*
+   * Risk.
+   */
+  let risk = "MEDIUM";
+
+  if (
+    marketQuality >= 75 &&
+    confidence >= 75 &&
+    Math.abs(edgePct) >= 5
+  ) {
+    risk = "LOW";
+  } else if (
+    marketQuality < 35 ||
+    confidence < 55
+  ) {
+    risk = "HIGH";
+  }
+
+  /*
+   * AI reasoning.
+   */
+  const reasons = [];
+
+  if (Math.abs(edgePct) >= 5) {
+    reasons.push(
+      `model sees a ${Math.abs(edgePct).toFixed(1)}% probability gap`
+    );
+  } else if (Math.abs(edgePct) >= 2) {
+    reasons.push(
+      `model sees a moderate ${Math.abs(edgePct).toFixed(1)}% probability gap`
+    );
+  } else {
+    reasons.push(
+      "model sees limited probability edge"
+    );
+  }
+
+  if (marketQuality >= 75) {
+    reasons.push("strong market liquidity and activity");
+  } else if (marketQuality >= 50) {
+    reasons.push("acceptable market liquidity and activity");
+  } else {
+    reasons.push("lower market quality increases uncertainty");
+  }
+
+  if (momentum >= 70) {
+    reasons.push("recent trading activity is elevated");
+  } else if (momentum <= 30) {
+    reasons.push("recent trading activity is relatively quiet");
+  }
+
+  if (marketYes >= 0.90) {
+    reasons.push("YES probability is already heavily priced");
+  } else if (marketYes <= 0.10) {
+    reasons.push("YES probability is currently very low");
+  }
+
+  const recommendation =
+    side === "YES"
+      ? strength === "STRONG"
+        ? "AI FAVORS YES"
+        : "LEAN YES"
+      : side === "NO"
+        ? strength === "STRONG"
+          ? "AI FAVORS NO"
+          : "LEAN NO"
+        : "NO CLEAR EDGE";
+
   return {
-    aiYes: pct(aiYes),
-    aiNo: pct(aiNo),
+    aiYes: percent(aiYes),
+    aiNo: percent(aiNo),
 
     modelYes: aiYes,
     modelNo: aiNo,
 
-    confidence: Math.round(confidence * 100),
+    confidence: Math.round(confidence),
+
     edge: Math.round(edgePct * 100) / 100,
     edgePct: Math.round(edgePct * 100) / 100,
 
-    modelQuality: Math.round(quality * 100),
+    modelQuality: Math.round(marketQuality),
+
+    momentum: Math.round(momentum),
+
+    opportunityScore:
+      Math.round(opportunityScore),
+
+    risk,
+
+    recommendation,
+
+    reasoning: reasons.join(". ") + ".",
+
+    factors: {
+      liquidity: Math.round(liquidityScore * 100),
+      volume: Math.round(volumeScore * 100),
+      recentActivity:
+        Math.round(recentVolumeScore * 100),
+      marketQuality:
+        Math.round(marketQuality),
+      momentum:
+        Math.round(momentum)
+    },
 
     signal: {
       side,
       strength,
-      score: Math.round(score)
+      score: Math.round(opportunityScore)
     }
   };
 }
@@ -211,23 +363,36 @@ function normalizeMarket(market) {
   const outcomes = arr(market.outcomes);
   const prices = arr(market.outcomePrices);
 
-  const yesProbability = getOutcomeProbability(
-    outcomes,
-    prices,
-    "Yes"
-  );
+  const yesProbability =
+    getOutcomeProbability(
+      outcomes,
+      prices,
+      "Yes"
+    );
 
-  const noProbability = getOutcomeProbability(
-    outcomes,
-    prices,
-    "No"
-  );
+  const noProbability =
+    getOutcomeProbability(
+      outcomes,
+      prices,
+      "No"
+    );
 
   const normalized = {
-    id: String(market.id || market.conditionId || ""),
-    question: market.question || "Unknown market",
-    slug: market.slug || "",
-    conditionId: market.conditionId || "",
+    id: String(
+      market.id ||
+      market.conditionId ||
+      ""
+    ),
+
+    question:
+      market.question ||
+      "Unknown market",
+
+    slug:
+      market.slug || "",
+
+    conditionId:
+      market.conditionId || "",
 
     category:
       market.category ||
@@ -235,62 +400,99 @@ function normalizeMarket(market) {
       market.eventTitle ||
       "Other",
 
-    description: market.description || "",
+    description:
+      market.description || "",
 
-    image: market.image || "",
-    icon: market.icon || "",
+    image:
+      market.image || "",
 
-    active: Boolean(market.active),
-    closed: Boolean(market.closed),
-    archived: Boolean(market.archived),
+    icon:
+      market.icon || "",
 
-    restricted: Boolean(market.restricted),
-    featured: Boolean(market.featured),
-    new: Boolean(market.new),
+    active:
+      Boolean(market.active),
 
-    startDate: market.startDate || null,
-    endDate: market.endDate || null,
-    closedTime: market.closedTime || null,
+    closed:
+      Boolean(market.closed),
+
+    archived:
+      Boolean(market.archived),
+
+    restricted:
+      Boolean(market.restricted),
+
+    featured:
+      Boolean(market.featured),
+
+    new:
+      Boolean(market.new),
+
+    startDate:
+      market.startDate || null,
+
+    endDate:
+      market.endDate || null,
+
+    closedTime:
+      market.closedTime || null,
 
     outcomes,
+
     outcomePrices: prices,
 
     yes: {
       price: yesProbability,
       probability: yesProbability,
-      percentage: pct(yesProbability),
+      percentage:
+        percent(yesProbability),
       tokenId: ""
     },
 
     no: {
       price: noProbability,
       probability: noProbability,
-      percentage: pct(noProbability),
+      percentage:
+        percent(noProbability),
       tokenId: ""
     },
 
-    volume: normalizeNumber(market.volume),
-    volume24h: normalizeNumber(
-      market.volume24h ||
-      market.volume24Hour ||
-      market.oneDayVolume
-    ),
+    volume:
+      moneyNumber(market.volume),
 
-    liquidity: normalizeNumber(market.liquidity),
+    volume24h:
+      moneyNumber(
+        market.volume24h ||
+        market.volume24Hour ||
+        market.oneDayVolume
+      ),
 
-    enableOrderBook: Boolean(market.enableOrderBook),
+    liquidity:
+      moneyNumber(market.liquidity),
+
+    enableOrderBook:
+      Boolean(market.enableOrderBook),
 
     orderPriceMinTickSize:
-      market.orderPriceMinTickSize || null,
+      market.orderPriceMinTickSize ||
+      null,
 
     minimumOrderSize:
-      market.minimumOrderSize || null,
+      market.minimumOrderSize ||
+      null,
 
-    negRisk: Boolean(market.negRisk),
-    negRiskMarketID: market.negRiskMarketID || null
+    negRisk:
+      Boolean(market.negRisk),
+
+    negRiskMarketID:
+      market.negRiskMarketID ||
+      null,
+
+    clobTokenIds:
+      arr(market.clobTokenIds)
   };
 
-  const ai = calculateAI(normalized);
+  const ai =
+    calculateAI(normalized);
 
   return {
     ...normalized,
@@ -298,7 +500,7 @@ function normalizeMarket(market) {
   };
 }
 
-async function getMarkets(limit = 100) {
+async function getMarkets(limit) {
   const url =
     `${GAMMA}/markets` +
     `?active=true` +
@@ -308,11 +510,16 @@ async function getMarkets(limit = 100) {
     `&order=volume24hr` +
     `&ascending=false`;
 
-  const data = await fetchJson(url);
+  const data =
+    await fetchJson(url);
 
-  if (Array.isArray(data)) return data;
+  if (Array.isArray(data)) {
+    return data;
+  }
 
-  if (Array.isArray(data?.data)) return data.data;
+  if (Array.isArray(data?.data)) {
+    return data.data;
+  }
 
   return [];
 }
@@ -323,7 +530,9 @@ async function getBook(tokenId) {
   try {
     return await fetchJson(
       `${CLOB}/book?token_id=${encodeURIComponent(tokenId)}`,
-      { timeout: 6000 }
+      {
+        timeout: 6000
+      }
     );
   } catch {
     return null;
@@ -336,91 +545,125 @@ async function getHistory(tokenId) {
   try {
     return await fetchJson(
       `${CLOB}/prices-history?market=${encodeURIComponent(tokenId)}`,
-      { timeout: 6000 }
+      {
+        timeout: 6000
+      }
     );
   } catch {
     return null;
   }
 }
 
-async function enrichMarket(market, params) {
-  const result = { ...market };
+async function enrichMarket(
+  market,
+  params
+) {
+  const result = {
+    ...market
+  };
 
-  const outcomes = market.outcomes || [];
-  const prices = market.outcomePrices || [];
+  const tokens =
+    market.clobTokenIds || [];
 
-  const yesIndex = outcomes.findIndex(
-    x => String(x).toLowerCase() === "yes"
-  );
-
-  const noIndex = outcomes.findIndex(
-    x => String(x).toLowerCase() === "no"
-  );
-
-  if (yesIndex >= 0) {
+  if (tokens[0]) {
     result.yes.tokenId =
-      market.clobTokenIds
-        ? arr(market.clobTokenIds)[yesIndex] || ""
-        : "";
+      tokens[0];
   }
 
-  if (noIndex >= 0) {
+  if (tokens[1]) {
     result.no.tokenId =
-      market.clobTokenIds
-        ? arr(market.clobTokenIds)[noIndex] || ""
-        : "";
+      tokens[1];
   }
 
   if (params.book === "true") {
-    result.orderBook = await getBook(result.yes.tokenId);
+    result.orderBook =
+      await getBook(
+        result.yes.tokenId
+      );
   }
 
   if (params.history === "true") {
-    result.priceHistory = await getHistory(result.yes.tokenId);
+    result.priceHistory =
+      await getHistory(
+        result.yes.tokenId
+      );
   }
 
   return result;
 }
 
 function buildStats(markets) {
-  const total = markets.length;
+  const total =
+    markets.length;
 
-  const active = markets.filter(m => m.active).length;
-  const closed = markets.filter(m => m.closed).length;
+  const active =
+    markets.filter(
+      m => m.active
+    ).length;
 
-  const totalVolume = markets.reduce(
-    (sum, m) => sum + normalizeNumber(m.volume),
-    0
-  );
+  const closed =
+    markets.filter(
+      m => m.closed
+    ).length;
 
-  const totalLiquidity = markets.reduce(
-    (sum, m) => sum + normalizeNumber(m.liquidity),
-    0
-  );
+  const totalVolume =
+    markets.reduce(
+      (sum, m) =>
+        sum + moneyNumber(m.volume),
+      0
+    );
+
+  const totalLiquidity =
+    markets.reduce(
+      (sum, m) =>
+        sum + moneyNumber(m.liquidity),
+      0
+    );
 
   const avgYesProbability =
-    total > 0
+    total
       ? markets.reduce(
-          (sum, m) => sum + probability(m.yes?.probability),
+          (sum, m) =>
+            sum +
+            probability(
+              m.yes?.probability
+            ),
           0
         ) / total
       : 0;
 
-  const strongSignals = markets.filter(
-    m => m.signal?.strength === "STRONG"
-  ).length;
+  const strongSignals =
+    markets.filter(
+      m =>
+        m.signal?.strength ===
+        "STRONG"
+    ).length;
 
-  const yesSignals = markets.filter(
-    m => m.signal?.side === "YES"
-  ).length;
+  const yesSignals =
+    markets.filter(
+      m =>
+        m.signal?.side === "YES"
+    ).length;
 
-  const noSignals = markets.filter(
-    m => m.signal?.side === "NO"
-  ).length;
+  const noSignals =
+    markets.filter(
+      m =>
+        m.signal?.side === "NO"
+    ).length;
 
-  const opportunities = markets.filter(
-    m => Math.abs(normalizeNumber(m.edge)) >= 2
-  ).length;
+  const opportunities =
+    markets.filter(
+      m =>
+        Math.abs(
+          moneyNumber(m.edge)
+        ) >= 2
+    ).length;
+
+  const lowRisk =
+    markets.filter(
+      m =>
+        m.risk === "LOW"
+    ).length;
 
   return {
     total,
@@ -430,86 +673,228 @@ function buildStats(markets) {
     totalVolume,
     totalLiquidity,
 
-    avgYesProbability: pct(avgYesProbability),
+    avgYesProbability:
+      percent(avgYesProbability),
 
     strongSignals,
     yesSignals,
     noSignals,
 
-    opportunities
+    opportunities,
+
+    lowRisk
   };
 }
 
-export default async function handler(req, res) {
+function compactMarket(m) {
+  return {
+    id: m.id,
+
+    question:
+      m.question,
+
+    category:
+      m.category,
+
+    marketYes:
+      m.yes?.probability ?? 0,
+
+    marketNo:
+      m.no?.probability ?? 0,
+
+    aiYes:
+      m.aiYes,
+
+    aiNo:
+      m.aiNo,
+
+    modelYes:
+      m.modelYes,
+
+    modelNo:
+      m.modelNo,
+
+    confidence:
+      m.confidence,
+
+    edge:
+      m.edge,
+
+    edgePct:
+      m.edgePct,
+
+    modelQuality:
+      m.modelQuality,
+
+    momentum:
+      m.momentum,
+
+    opportunityScore:
+      m.opportunityScore,
+
+    risk:
+      m.risk,
+
+    recommendation:
+      m.recommendation,
+
+    reasoning:
+      m.reasoning,
+
+    factors:
+      m.factors,
+
+    signal:
+      m.signal,
+
+    volume:
+      m.volume,
+
+    volume24h:
+      m.volume24h,
+
+    liquidity:
+      m.liquidity
+  };
+}
+
+export default async function handler(
+  req,
+  res
+) {
   try {
     res.setHeader(
       "Cache-Control",
       "s-maxage=30, stale-while-revalidate=60"
     );
 
-    const params = req.query || {};
+    const params =
+      req.query || {};
 
-    const requestedLimit = num(params.limit, 100);
+    const requestedLimit =
+      num(
+        params.limit,
+        100
+      );
 
-    const limit = Math.min(
-      Math.max(requestedLimit, 1),
-      100
-    );
+    const limit =
+      Math.min(
+        Math.max(
+          requestedLimit,
+          1
+        ),
+        100
+      );
 
-    let rawMarkets = await getMarkets(limit);
+    let rawMarkets =
+      await getMarkets(limit);
 
-    let markets = rawMarkets
-      .map(normalizeMarket)
-      .filter(m => m.question);
+    let markets =
+      rawMarkets
+        .map(normalizeMarket)
+        .filter(
+          m => m.question
+        );
 
     /*
-     * Highest AI edge first.
+     * Best opportunities first.
      */
     markets.sort(
       (a, b) =>
-        Math.abs(num(b.edge)) -
-        Math.abs(num(a.edge))
+        b.opportunityScore -
+        a.opportunityScore
     );
 
-    if (params.book === "true" || params.history === "true") {
+    if (
+      params.book === "true" ||
+      params.history === "true"
+    ) {
       const enriched = [];
 
-      for (const market of markets) {
+      for (
+        const market of markets
+      ) {
         enriched.push(
-          await enrichMarket(market, params)
+          await enrichMarket(
+            market,
+            params
+          )
         );
       }
 
       markets = enriched;
     }
 
-    const stats = buildStats(markets);
+    const stats =
+      buildStats(markets);
 
     const responseMarkets =
       params.details === "false"
-        ? markets.map(m => ({
-            id: m.id,
-            question: m.question,
-            category: m.category,
-
-            yes: m.yes,
-            no: m.no,
-
-            aiYes: m.aiYes,
-            aiNo: m.aiNo,
-
-            confidence: m.confidence,
-            edge: m.edge,
-            edgePct: m.edgePct,
-
-            modelQuality: m.modelQuality,
-            signal: m.signal,
-
-            volume: m.volume,
-            volume24h: m.volume24h,
-            liquidity: m.liquidity
-          }))
+        ? markets.map(
+            compactMarket
+          )
         : markets;
+
+    const topMarkets =
+      responseMarkets
+        .slice(0, 10)
+        .map(m => ({
+          id: m.id,
+          question: m.question,
+          category: m.category,
+
+          marketYes:
+            m.yes?.probability ??
+            m.marketYes ??
+            0,
+
+          marketNo:
+            m.no?.probability ??
+            m.marketNo ??
+            0,
+
+          aiYes:
+            m.aiYes,
+
+          aiNo:
+            m.aiNo,
+
+          confidence:
+            m.confidence,
+
+          edge:
+            m.edge,
+
+          edgePct:
+            m.edgePct,
+
+          modelQuality:
+            m.modelQuality,
+
+          momentum:
+            m.momentum,
+
+          opportunityScore:
+            m.opportunityScore,
+
+          risk:
+            m.risk,
+
+          recommendation:
+            m.recommendation,
+
+          reasoning:
+            m.reasoning,
+
+          signal:
+            m.signal,
+
+          volume:
+            m.volume,
+
+          liquidity:
+            m.liquidity
+        }));
 
     return res.status(200).json({
       ok: true,
@@ -519,46 +904,38 @@ export default async function handler(req, res) {
         clob: CLOB
       },
 
-      timestamp: Date.now(),
+      timestamp:
+        Date.now(),
 
-      count: responseMarkets.length,
+      count:
+        responseMarkets.length,
 
       stats,
 
-      topMarkets: responseMarkets
-        .slice(0, 10)
-        .map(m => ({
-          id: m.id,
-          question: m.question,
-          category: m.category,
+      topMarkets,
 
-          marketYes: m.yes?.probability ?? 0,
-          marketNo: m.no?.probability ?? 0,
-
-          aiYes: m.aiYes,
-          aiNo: m.aiNo,
-
-          confidence: m.confidence,
-
-          edge: m.edge,
-          edgePct: m.edgePct,
-
-          signal: m.signal,
-
-          volume: m.volume,
-          liquidity: m.liquidity
-        })),
-
-      markets: responseMarkets
+      markets:
+        responseMarkets
     });
+
   } catch (error) {
-    console.error("Polymarket API error:", error);
+    console.error(
+      "Polymarket API error:",
+      error
+    );
 
     return res.status(500).json({
       ok: false,
-      error: "Polymarket API error",
-      message: error?.message || "Unknown error",
-      timestamp: Date.now()
+
+      error:
+        "Polymarket API error",
+
+      message:
+        error?.message ||
+        "Unknown error",
+
+      timestamp:
+        Date.now()
     });
   }
 }
