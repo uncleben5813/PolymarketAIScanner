@@ -1,1 +1,1 @@
-{"functions":{"api/markets.js":{"maxDuration":10}}}
+{"version":2,"functions":{"api/markets.js":{"maxDuration":60}},"routes":[{"src":"/api/markets","dest":"/api/markets.js"}]}
